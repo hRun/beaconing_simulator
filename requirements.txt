@@ -1,0 +1,2 @@
+concurrent-log-handler==0.9.28
+requests==2.32.4
