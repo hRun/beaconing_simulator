@@ -74,7 +74,7 @@ def beacon_sleep():
     global reduction_count
 
     # roll jitter and sleep for beaconing interval plus jitter
-    jitter = random.uniform(-1.0*(args.interval/100)*args.include_jitter, 1.0*(args.interval/100)*args.include_jitter)
+    jitter = random.uniform(-1.0*(args.interval/100)*args.jitter, 1.0*(args.interval/100)*args.jitter)
     jitter = 0 if (jitter < 0 and -jitter > args.interval) else jitter  # can't sleep negative time
 
     if args.log_only:
@@ -106,8 +106,8 @@ def write_beaconing_log_event(response):
     event_logger.info(f'''\
         "SourceUserName": "{USER}", \
         "DeviceName": "{HOSTNAME}", \
-        "DestinationHostName": "{args.destination}", \
-        "DestinationIP": "{args.destination}", \
+        "DestinationHostName": "{destination_domain}", \
+        "DestinationIP": "{destination_ip}", \
         "RequestMethods": "{args.request_method}", \
         "Protocol": "{args.protocol}", \
         "RequestURL": "{args.protocol.lower()}://{args.destination}/{beaconing_uri}", \
@@ -121,19 +121,32 @@ def simulate_c2_log_only_iteration():
     """
     global fake_timestamp
 
-    # TODO this should consist of multiple requests? one for receiving command, one for results later?
+    # we're doing two requests here. the first receiving a command, the second returning the execution results
     event_logger.info(f'''\
         "TimeGenerated": "{fake_timestamp}", \
         "SourceUserName": "{USER}", \
         "DeviceName": "{HOSTNAME}", \
-        "DestinationHostName": "{args.destination}", \
-        "DestinationIP": "{args.destination}", \
+        "DestinationHostName": "{destination_domain}", \
+        "DestinationIP": "{destination_ip}", \
         "RequestMethods": "{args.request_method}", \
         "Protocol": "{args.protocol}", \
         "RequestURL": "{args.protocol.lower()}://{args.destination}/{command_uri}", \
-        "SentBytes": {random.randint(350, 5000)}, \
+        "SentBytes": {210}, \
         "ReceivedBytes": {random.randint(400, 15000)}'''.replace('    ', ''))
     fake_timestamp += timedelta(seconds=random.randint(1, 40))  # seems like appropriate values. can be changed though
+
+    event_logger.info(f'''\
+        "TimeGenerated": "{fake_timestamp}", \
+        "SourceUserName": "{USER}", \
+        "DeviceName": "{HOSTNAME}", \
+        "DestinationHostName": "{destination_domain}", \
+        "DestinationIP": "{destination_ip}", \
+        "RequestMethods": "{args.request_method}", \
+        "Protocol": "{args.protocol}", \
+        "RequestURL": "{args.protocol.lower()}://{args.destination}/{command_uri}", \
+        "SentBytes": {random.randint(400, 15000)}, \
+        "ReceivedBytes": {360}'''.replace('    ', ''))
+    fake_timestamp += timedelta(milliseconds=random.randint(100, 400))  # seems like appropriate values. can be changed though
 
 
 def simulate_exfil_log_only_iteration():
@@ -149,8 +162,8 @@ def simulate_exfil_log_only_iteration():
         "TimeGenerated": "{fake_timestamp}", \
         "SourceUserName": "{USER}", \
         "DeviceName": "{HOSTNAME}", \
-        "DestinationHostName": "{args.destination}", \
-        "DestinationIP": "{args.destination}", \
+        "DestinationHostName": "{destination_domain}", \
+        "DestinationIP": "{destination_ip}", \
         "RequestMethods": "{args.request_method}", \
         "Protocol": "{args.protocol}", \
         "RequestURL": "{args.protocol.lower()}://{args.destination}/{exfil_uri}", \
@@ -169,8 +182,8 @@ def simulate_normal_log_only_iteration():
         "TimeGenerated": "{fake_timestamp}", \
         "SourceUserName": "{USER}", \
         "DeviceName": "{HOSTNAME}", \
-        "DestinationHostName": "{args.destination}", \
-        "DestinationIP": "{args.destination}", \
+        "DestinationHostName": "{destination_domain}", \
+        "DestinationIP": "{destination_ip}", \
         "RequestMethods": "{args.request_method}", \
         "Protocol": "{args.protocol}", \
         "RequestURL": "{args.protocol.lower()}://{args.destination}/{beaconing_uri}", \
@@ -260,13 +273,13 @@ def simulate_beaconing():
 
         # randomly simulate command execution. don't do so during the first 20 intervals
         if COMMAND_RATIO > 0.0 and i > 20:
-            if random.uniform(0.0, 99.9) < COMMAND_RATIO:
+            if random.uniform(0.00, 99.99) < COMMAND_RATIO:
                 message_logger.info(f'rolled to simulate command transfer and execution on request #{i}.')
 
                 simulate_c2_iteration()
 
                 # temporarily increase beaconing interval to simulate the attacker needing less beacons while working on the received data
-                reduction_count = random.randint(2, int((args.interval/60)*args.max_requests/50)+1)  # minutes
+                reduction_count = random.randint(2, int((args.interval/60)*args.max_requests/75)+1)  # minutes
                 reduction_count = int((reduction_count*60) / args.interval)  # intervals
                 reduction_time  = random.randint(int(args.interval/10), int(args.interval*5))  # seconds to temporarily increase the beaconing interval by
 
@@ -275,14 +288,14 @@ def simulate_beaconing():
                 continue
 
         if ABSENCE_START > 0 and i == ABSENCE_START:
-            message_logger.info(f'hit request #{i}. sleeping for {args.include_absence} minutes to simulate the device being offline/asleep/....')
+            message_logger.info(f'hit request #{i}. sleeping for {args.absence} minutes to simulate the device being offline/asleep/....')
 
             absent = True
 
             if args.log_only:
-                fake_timestamp += timedelta(minutes=args.include_absence)
+                fake_timestamp += timedelta(minutes=args.absence)
             else:
-                time.sleep(args.include_absence)
+                time.sleep(args.absence)
 
             absent = False
             continue
@@ -323,7 +336,7 @@ def make_background_noise():
                     "SourceUserName": "{USER}", \
                     "DeviceName": "{HOSTNAME}", \
                     "DestinationHostName": "{domain}", \
-                    "DestinationIP": "{domain}", \
+                    "DestinationIP": "{USER_ACTIVITY_IPS[domain]}", \
                     "RequestMethods": "{args.request_method}", \
                     "Protocol": "{args.protocol}", \
                     "RequestURL": "{args.protocol.lower()}://{domain}/{random_uri}", \
@@ -345,7 +358,7 @@ def make_background_noise():
                     "SourceUserName": "{USER}", \
                     "DeviceName": "{HOSTNAME}", \
                     "DestinationHostName": "{domain}", \
-                    "DestinationIP": "{domain}", \
+                    "DestinationIP": "{USER_ACTIVITY_IPS[domain]}", \
                     "RequestMethods": "{args.request_method}", \
                     "Protocol": "{args.protocol}", \
                     "RequestURL": "{args.protocol.lower()}://{domain}/{random_uri}", \
@@ -356,17 +369,17 @@ def make_background_noise():
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("destination", help="beaconing destination (fqdn or ip)", type=str)  # TODO resolve/lookup for the other one
+parser.add_argument("destination", help="beaconing destination (fqdn or ip)", type=str)
 parser.add_argument("interval", help="default beaconing interval (in seconds)", type=int, default=30)
 parser.add_argument("max_requests", help="end the simulation after X requests", type=int, default=720)  # makes a default run time of approximately 6 hours
-parser.add_argument("--include_absence", help="make a significant pause of X minutes during the test to simulate the device being offline/sleeping/...", type=int, default=0)
-parser.add_argument("--include_commands", help="simulate the beacon receiving instructions from the c2 server (some larger responses, followed by larger requests, followed by temporary slower beaconing)", action="store_true", default=True)
-parser.add_argument("--include_exfil", help="simulate the beacon exfiltrating data (similar to --include_commands, but with significantly larger outflow)", action="store_true", default=True)
-parser.add_argument("--include_jitter", help="add random jitter to the time intervals between the beaconing requests (maximum percent of interval)", type=int, default=10)
-parser.add_argument("--include_noise", help="make semi-random non-beaconing requests in the background to add noise (as user activity would)", action="store_true", default=True)
+parser.add_argument("--absence", help="make a significant pause of X minutes during the test to simulate the device being offline/sleeping/...", type=int, default=0)
+parser.add_argument("--no_c2", help="don't simulate the beacon receiving instructions from the c2 server (some larger responses, followed by larger requests, followed by temporary slower beaconing)", action="store_true", default=False)
+parser.add_argument("--no_exfil", help="don't simulate the beacon exfiltrating data (similar to c2, but with significantly larger outflow)", action="store_true", default=False)
+parser.add_argument("--jitter", help="add random jitter to the time intervals between the beaconing requests (maximum percent of interval)", type=int, default=10)
+parser.add_argument("--no_noise", help="don't make semi-random non-beaconing requests in the background to add noise (as user activity would)", action="store_true", default=False)
 parser.add_argument("--log_only", help="only write log events as they would be expected from the simulation, don't actually dispatch requests", action="store_true", default=False)
 parser.add_argument("--protocol", help="network protocol to use for beaconing communication", type=str, choices=['HTTP', 'HTTPS'], default='HTTP')  # TODO choices=['DNS', 'HTTP', 'TCP', 'UDP', 'WEBSOCKET']
-parser.add_argument("--request_method", help="http request method to use for beaconing communication", type=str, choices=['GET', 'POST'], default='GET')
+parser.add_argument("--request_method", help="http request method to use for beaconing communication", type=str, choices=['GET', 'POST'], default='GET')  # TODO more
 parser.add_argument("--use_dynamic_urls", help="use a new randomly generated path on each request", action="store_true", default=False)
 # TODO parser.add_argument("--use_round_robin", help="iterate through a number of destinations instead of using just one (list of fqdns besides the primary one)", type=list)
 args = parser.parse_args()
@@ -380,17 +393,45 @@ USER: str                  = getlogin()  # TODO domain? upn?
 absent: bool               = False
 beaconing_uri: str         = 'ping'
 command_uri: str           = 'command'
+destination_domain: str    = ''
+destination_ip: str        = ''
 done: bool                 = False
 exfil_uri: str             = 'exfil'
 fake_timestamp: datetime   = datetime.now(timezone.utc)  # expected format is strftime('%m/%d/%Y %H:%M:%S.%.3f %p')
 reduction_count: int       = 0
 reduction_time:  int       = 0
 response                   = None
+USER_ACTIVITY_IPS: dict    = {}
 USER_ACTIVITY_DOMAINS:list = [
     'amazon.com', 'cnn.com', 'github.com', 'google.com', 'instagram.com',
     'justbean.co', 'office.com', 'reddit.com', 'reuters.com', 'theuselessweb.com', 
     'tiktok.com', 'x.com', 'youtube.com', '9gag.com'
 ]
+
+print('resolving hostnames and ips... starting in a second...')
+
+for i in USER_ACTIVITY_DOMAINS:
+    try:
+        USER_ACTIVITY_IPS[i] = list({addr[-1][0] for addr in socket.getaddrinfo(i, 0, 0, 0, 0)})[0]  # always takes the first ip, even if multiple were returned
+    except Exception:
+        USER_ACTIVITY_IPS[i] = 'N/A'
+
+if args.destination.replace('.', '').isdigit():
+    # ip was specified as destination
+    destination_ip = args.destination
+
+    try:
+        destination_domain = socket.gethostbyaddr(args.destination)[0]
+    except Exception:
+        destination_domain = 'N/A'
+else:
+    # domain was specified as destination
+    destination_domain = args.destination
+
+    try:
+        destination_ip = list({addr[-1][0] for addr in socket.getaddrinfo(args.destination, 0, 0, 0, 0)})[0]  # always takes the first ip, even if multiple were returned
+    except Exception:
+        destination_ip = 'N/A'
 
 
 # set up logger for general messages (file and stdout)
@@ -450,28 +491,28 @@ if args.max_requests < 100:
     message_logger.info(f'max_requests was set to {args.max_requests}. it was automatically increased to 100.')
     args.max_requests = 100
 
-if args.include_jitter < 0:
-    args.include_jitter = 0
+if args.jitter < 0:
+    args.jitter = 0
 
-message_logger.info(f'will dispatch {args.max_requests} requests towards "{args.destination}" with an interval of {args.interval} seconds and {args.include_jitter}% jitter before ending the simulation.')
-message_logger.info(f'{"" if args.include_noise else "no"} background noise as users would generate it will be simulated.')
+message_logger.info(f'will dispatch {args.max_requests} requests towards "{args.destination}" with an interval of {args.interval} seconds and {args.jitter}% jitter before ending the simulation.')
+message_logger.info(f'{"" if not args.no_noise else "no"} background noise as users would generate it will be simulated.')
 
-if args.include_commands:
-    COMMAND_RATIO = random.uniform(0.5, 3.5)  # x percent chance of a request being active usage of the c2 channel. static maximum of X%
+if not args.no_c2:
+    COMMAND_RATIO = random.uniform(0.01, 0.3)  # x percent chance of a request being active usage of the c2 channel. static maximum of X%
     message_logger.info(f'{COMMAND_RATIO}% of requests will simulate active usage of the c2 channel.')
 
-if args.include_absence > 0:
+if args.absence > 0:
     ABSENCE_START = random.randint(int(args.max_requests*0.4), int(args.max_requests*0.8))  # start absence interval after x requests
-    message_logger.info(f'{args.include_absence} minutes of absence (no beacons doe to the device being offline/asleep/...) will be simulated after {ABSENCE_START} requests.')
+    message_logger.info(f'{args.absence} minutes of absence (no beacons doe to the device being offline/asleep/...) will be simulated after {ABSENCE_START} requests.')
 
-if args.include_exfil:
+if not args.no_exfil:
     EXFIL_START = random.randint(int(args.max_requests*0.8)+1, args.max_requests)  # start exfiltration simulation after x requests. always after absence
     message_logger.info(f'data exfiltration will be simulated after {EXFIL_START} requests.')
 
 if args.log_only:
     message_logger.info(f'simulation will run in log-only mode. no actual requests will be dispatched.')
 else:
-    message_logger.info(f'simulation will run at least {round((args.interval/60)*args.max_requests + args.include_absence, 2)} minutes.')
+    message_logger.info(f'simulation will run at least {round((args.interval/60)*args.max_requests + args.absence, 2)} minutes.')
     # TODO do a check whether the destination is reachable
 
 
@@ -481,8 +522,9 @@ if __name__ == "__main__":
     beaconing_thread = threading.Thread(target=simulate_beaconing, daemon=True)
     beaconing_thread.start()
 
-    noise_thread = threading.Thread(target=make_background_noise, daemon=True)
-    noise_thread.start()
+    if not args.no_noise:
+        noise_thread = threading.Thread(target=make_background_noise, daemon=True)
+        noise_thread.start()
 
     # keep the main thread alive
     try:
@@ -490,6 +532,7 @@ if __name__ == "__main__":
             time.sleep(1)
 
             if done:
+                message_logger.info(f'done. have a nice day :)')
                 exit(0)
     except KeyboardInterrupt:
         pass
