@@ -2,10 +2,11 @@
 
 a python script to simulate malware beaconing in a slightly more sophistocated way than just sending a http get request each x seconds with some jitter
 
+
 ## features
 
 - simulate the beacon halting for a period of time due to the compromised device being switched off / asleep / ...
-- simulate the beacon receiving a command from the c2 server: a larger response to a request followed by a larger request containing the results after a while. the beacon then slows down for a while assuming the operator works on the results
+- simulate the beacon receiving a command from the c2 server: multiple larger responses and larger requests to immitate commands and execution results going back and forth for a few minutes. the beacon then slows down for a while assuming the operator works on the results
 - simulate the beacon exfiltrating data: a very large request followed by some silence
 - simulate parallel user activity as background noise
 - run the simulation in a "log only" mode, not making any actual network requests, but writing a log file which should look similar to what your proxy/etc. would produce
@@ -20,6 +21,7 @@ a python script to simulate malware beaconing in a slightly more sophistocated w
 ```
 python beaconing_simulation.py example.com 31 100 --log_only --include_absence 600
 ```
+
 
 ### resulting message log
 
@@ -38,6 +40,7 @@ python beaconing_simulation.py example.com 31 100 --log_only --include_absence 6
 2025-06-16 16:50:54,066 - INFO - reducing beaconing by 25 seconds for the next 3 requests.
 2025-06-16 16:50:54,067 - INFO - hit request #92. simulating data exfiltration.
 ```
+
 
 ### resulting event log
 
