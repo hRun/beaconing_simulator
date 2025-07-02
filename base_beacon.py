@@ -155,6 +155,14 @@ class Beacon():
                 self.reduction_count -= 1
 
 
+    def data_jitter(self):
+        """
+        return a random value to add or substract from sent data as jitter (currently somewhat hard-coded instead of percentual)
+        """
+        return random.randint(-200, 400)
+
+
+
     @abc.abstractmethod
     def write_log_event(self, **kwargs):
         """
@@ -191,6 +199,14 @@ class Beacon():
 
 
     @abc.abstractmethod
+    def noise_log_only(self):
+        """
+        make one or multiple requests simulating normal user activity while a beacon is going
+        """
+        raise NotImplementedError('Method must be implemented in child classes')
+
+
+    @abc.abstractmethod
     def c2_iteration(self):
         """
         one beaconing iteration of the simulation with active c2 communication
@@ -211,5 +227,13 @@ class Beacon():
     def normal_iteration(self):
         """
         one normal beaconing iteration of the simulation
+        """
+        raise NotImplementedError('Method must be implemented in child classes')
+
+
+    @abc.abstractmethod
+    def noise(self):
+        """
+        make one or multiple requests simulating normal user activity while a beacon is going
         """
         raise NotImplementedError('Method must be implemented in child classes')

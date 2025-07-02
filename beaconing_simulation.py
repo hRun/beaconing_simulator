@@ -49,11 +49,12 @@ def simulate_beaconing():
                 beacon.c2_iteration()
 
                 # temporarily increase beaconing interval to simulate the attacker needing less beacons while working on the received data
-                beacon.reduction_count = random.randint(2, int((beacon.args.interval/60)*beacon.args.max_requests/75)+1)  # minutes
-                beacon.reduction_count = int((beacon.reduction_count*60) / beacon.args.interval)  # intervals
-                beacon.reduction_time  = random.randint(int(beacon.args.interval/10), int(beacon.args.interval*5))  # seconds to temporarily increase the beaconing interval by
+                if beacon.args.reduce_interval_after_c2:
+                    beacon.reduction_count = random.randint(2, int((beacon.args.interval/60)*beacon.args.max_requests/75)+1)  # minutes
+                    beacon.reduction_count = int((beacon.reduction_count*60) / beacon.args.interval)  # intervals
+                    beacon.reduction_time  = random.randint(int(beacon.args.interval/10), int(beacon.args.interval*5))  # seconds to temporarily increase the beaconing interval by
 
-                beacon.message_logger.info(f'reducing beaconing by {beacon.reduction_time} seconds for the next {beacon.reduction_count} requests.')
+                    beacon.message_logger.info(f'reducing beaconing by {beacon.reduction_time} seconds for the next {beacon.reduction_count} requests.')
                 continue
         if beacon.ABSENCE_START > 0 and i == beacon.ABSENCE_START:
             beacon.message_logger.info(f'hit request #{i}. sleeping for {beacon.args.absence} minutes to simulate the device being offline/asleep/....')
@@ -105,13 +106,14 @@ parser = argparse.ArgumentParser()
 parser.add_argument("destination", help="beaconing destination. i.e. the c2 server (fqdn or ip)", type=str)
 parser.add_argument("interval", help="default beaconing interval (in seconds). default is 30 seconds", type=int, default=30)
 parser.add_argument("max_requests", help="end the simulation after X requests. default is 720 requests, equating to ~6 hours with a 30 second interval", type=int, default=720)
-parser.add_argument("--jitter", help="add random jitter to the time intervals between the beaconing requests (in percent of intervals). default is 10%", type=int, default=10)
-parser.add_argument("--protocol", help="network protocol to use for beaconing communication. default is http", type=str, choices=['HTTP', 'HTTPS'], default='HTTP')  # TODO choices=['DNS', 'TCP', 'UDP', 'WEBSOCKET']
-parser.add_argument("--request_method", help="if using http, the request method to use for beaconing. default is get", type=str, choices=['GET', 'POST'], default='GET')  # TODO more
+parser.add_argument("--jitter", help="add random jitter to the time intervals between the beaconing requests (in percent of intervals). default is 10%", type=int, default=17)
+parser.add_argument("--protocol", help="network protocol to use for beaconing communication. default is http", type=str, choices=['HTTP', 'HTTPS', 'SOCKS', 'DSDDDDDDD'], default='HTTP')  # TODO choices=['DNS', 'TCP', 'UDP', 'WEBSOCKET']
+parser.add_argument("--request_method", help="if using http, the request method to use for beaconing. default is get", type=str, choices=['GET', 'POST', 'PUT'], default='GET')  # TODO HEAD?
 parser.add_argument("--use_dynamic_urls", help="if using http, use a new randomly generated uri path on each request. default is false", action="store_true", default=False)
 parser.add_argument("--absence", help="make a significant pause of X minutes during the test to simulate the device being offline/sleeping/... default is no absence", type=int, default=0)
 parser.add_argument("--no_c2", help="don't simulate the beacon receiving instructions from the c2 server (i.e. some larger responses, followed by larger requests, followed by temporary slower beaconing). default is to simulate c2 activity", action="store_true", default=False)
 parser.add_argument("--active_c2_ratio", help="the percentage of requests which should simulate active usage of the c2 channel. i.e. command and result exchange. default is between 0.1 and 3%", type=float, default=0.0)
+parser.add_argument("--reduce_interval_after_c2", help="reduce the polling interval after an active session, simulating how higher stealth could be achieved while the operator works on obtained data", action="store_true", default=False)
 parser.add_argument("--no_exfil", help="don't simulate the beacon exfiltrating data (similar to c2, but with significantly larger outflow). default is to simulate data exfiltration", action="store_true", default=False)
 parser.add_argument("--exfil_chunking", help="use chunking when exfiltrating data. i.e. send many small requests with data contained in unique headers or uris instead of one large one (in protocols where applicable). default is to not use chunking", type=str, choices=['NONE', 'HEADER', 'URI'], default='NONE')
 parser.add_argument("--no_noise", help="don't make semi-random, semi-realistic non-beaconing requests in the background to add noise (as user activity would). default is to make background noise", action="store_true", default=False)

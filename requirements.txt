@@ -1,2 +1,4 @@
+asyncio==3.4.3
 concurrent-log-handler==0.9.28
 requests==2.32.4
+websockets==15.0.1

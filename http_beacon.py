@@ -14,8 +14,15 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)  # we don't 
 
 
 class HttpBeacon(Beacon):
+    """
+    loosely based on https://sliver.sh/docs?name=HTTPS+C2 and https://github.com/threatexpress/malleable-c2/blob/master/jquery-c2.4.9.profile
+    """
+
+
     def __init__(self, args):
         super().__init__(args)
+        self.default_response_size = random.randint(200, 7000)  # default response size heavily depends on the maleable profile (e.g. whether it's configured to return a legitimate-looking web page, etc. or not)
+        self.default_request_size  = random.randint(150, 400)
 
 
     def approximate_request_size(request) -> int:
@@ -59,7 +66,7 @@ class HttpBeacon(Beacon):
             "DeviceName": "{self.HOSTNAME}", \
             "DestinationHostName": "{self.destination_domain}", \
             "DestinationIP": "{self.destination_ip if self.args.static_ip else random.choice(self.destination_ip_list)}", \
-            "RequestMethods": "{self.args.request_method}", \
+            "RequestMethod": "{self.args.request_method}", \
             "Protocol": "{self.args.protocol}", \
             "RequestURL": "{self.args.protocol.lower()}://{self.args.destination}/{uri}", \
             "SentBytes": {sent_bytes}, \
@@ -70,26 +77,26 @@ class HttpBeacon(Beacon):
         """
         one iteration of the simulation where events are only logged, no actual request is dispatched
         """
-        self.write_log_event(self.beaconing_uri, 210 + random.randint(-200, 250), random.randint(400, 15000))
+        self.write_log_event(self.beaconing_uri, self.default_request_size + self.data_jitter(), random.randint(400, 15000))  # receiving command
 
-        # send fast beacons for a while indicating the command is running
-        for i in range(random.randint(10, 400)):  # 10 -> 1-4 seconds runtime, 400 -> 40-160 seconds runtime with the defined fake sleep
-            self.write_log_event(self.command_uri, 210 + random.randint(-200, 250), 360 + random.randint(-200, 250))
-            self.fake_timestamp += timedelta(milliseconds=random.randint(100, 400))
+        # send faster beacons for a while indicating the command is running
+        for i in range(random.randint(10, 120)):  # 2-120 seconds command runtime with the defined fake sleep
+            self.write_log_event(self.command_uri, self.default_request_size + self.data_jitter(), self.default_response_size + self.data_jitter())
+            self.fake_timestamp += timedelta(milliseconds=random.randint(200, 1000))
 
         # command done, return execution results
-        exfil_size = random.randint(1000, 15000000)
+        exfil_size = random.randint(5000, 15000000)
 
-        if self.args.exfil_chunking != 'NONE' and exfil_size > 1000000:
-            for i in range(int(exfil_size/1000000)):  # static 1MB chunks
+        if self.args.exfil_chunking != 'NONE' and exfil_size > 460800:
+            for i in range(int(exfil_size/460800)):  # static 460kb chunks
                 if self.args.exfil_chunking == 'URI':
-                    self.write_log_event(''.join(random.choices(string.ascii_letters + string.digits, k=16)), 1000000, 360 + random.randint(-200, 250))
+                    self.write_log_event(''.join(random.choices(string.ascii_letters + string.digits, k=16)), 460800, self.default_response_size + self.data_jitter())
                 else:
-                    self.write_log_event(self.exfil_uri, 1000000, 360 + random.randint(-200, 250))
-                self.fake_timestamp += timedelta(seconds=1)  # 1s/MB
+                    self.write_log_event(self.exfil_uri, 460800, self.default_response_size + self.data_jitter())
+                self.fake_timestamp += timedelta(seconds=1)  # 1s/460kb
         else:
-            self.write_log_event(self.exfil_uri, exfil_size, 550 + random.randint(-100, 450))
-            self.fake_timestamp += timedelta(seconds=exfil_size/1000000)  # 1s/MB
+            self.write_log_event(self.exfil_uri, exfil_size, 550 + self.data_jitter())
+            self.fake_timestamp += timedelta(seconds=exfil_size/460800)  # 1s/460kb
 
         self.fake_timestamp += timedelta(seconds=random.randint(20, 300))  # operator is working on results and sending the next command
 
@@ -101,104 +108,27 @@ class HttpBeacon(Beacon):
         exfil_duration = random.randint(30, 600)
         exfil_size     = random.randint(10000000, 1000000000)
 
-        self.write_log_event(self.beaconing_uri, 210 + random.randint(-200, 250), random.randint(400, 15000))  # receiving exfil command
+        self.write_log_event(self.beaconing_uri, self.default_request_size + self.data_jitter(), random.randint(400, 15000))  # receiving exfil command
         self.fake_timestamp += timedelta(milliseconds=random.randint(100, 400))
 
         if self.args.exfil_chunking != 'NONE':
-            for i in range(int(exfil_size/1000000)):  # static 1MB chunks
+            for i in range(int(exfil_size/460800)):  # static 460kb chunks
                 if self.args.exfil_chunking == 'URI':
-                    self.write_log_event(''.join(random.choices(string.ascii_letters + string.digits, k=16)), 1000000, 360 + random.randint(-200, 250))
+                    self.write_log_event(''.join(random.choices(string.ascii_letters + string.digits, k=16)), 460800, self.default_response_size + self.data_jitter())
                 else:
-                    self.write_log_event(self.exfil_uri, 1000000, 360 + random.randint(-200, 250))
-                self.fake_timestamp += timedelta(seconds=1)  # 1s/MB
+                    self.write_log_event(self.exfil_uri, 460800, self.default_response_size + self.data_jitter())
+                self.fake_timestamp += timedelta(seconds=1)  # 1s/460kb
         else:
-            self.write_log_event(self.exfil_uri, exfil_size, 550 + random.randint(-100, 450))
-            self.fake_timestamp += timedelta(seconds=exfil_size/1000000)  # 1s/MB
+            self.write_log_event(self.exfil_uri, exfil_size, 550 + self.data_jitter())
+            self.fake_timestamp += timedelta(seconds=exfil_size/460800)  # 1s/460kb
 
 
     def normal_iteration_log_only(self):
         """
         one iteration of the simulation where events are only logged, no actual request is dispatched
         """
-        self.write_log_event(self.beaconing_uri, 210 + random.randint(-200, 250), 360 + random.randint(-200, 250))
+        self.write_log_event(self.beaconing_uri, self.default_request_size + self.data_jitter(), self.default_response_size + self.data_jitter())
         self.fake_timestamp += timedelta(milliseconds=random.randint(100, 400))  # seems like appropriate values. can be changed though
-
-
-    def c2_iteration(self):
-        """
-        one beaconing iteration of the simulation with active c2 communication
-        one iteration consists of multiple requests immitating how commands and results go back and forth for a while
-        """
-        for i in range(random.randint(1, 10)):  # up to X commands at once
-            if self.args.use_dynamic_urls:
-                command_uri = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
-                exfil_uri   = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
-
-            if self.args.log_only:
-                self.c2_iteration_log_only()
-            else:
-                try:
-                    pass  # TODO requires a server-side
-                except Exception:
-                    pass
-
-
-    def exfil_iteration(self):
-        """
-        one beaconing iteration of the simulation with data exfiltration
-        """
-        if self.args.use_dynamic_urls:
-            exfil_uri = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
-
-        if self.args.log_only:
-            self.exfil_iteration_log_only()
-        else:
-            try:
-                pass  # TODO requires a server-side
-            except Exception:
-                pass
-
-
-    def normal_iteration(self):
-        """
-        one normal beaconing iteration of the simulation
-        """
-        if self.args.use_dynamic_urls:
-            beaconing_uri = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
-
-        if self.args.log_only:
-            self.normal_iteration_log_only()
-        else:
-            try:
-                # TODO check response code?
-                if self.args.request_method == 'POST':
-                    response = requests.post(
-                        f'{self.args.protocol.lower()}://{self.args.destination}/{self.beaconing_uri}',
-                        headers={
-                            'user-agent': 'Beaconing Simulation Script for Threat Hunting and Attack Simulation',
-                            'accept': '*/*',
-                            'cache-control': 'no-cache'
-                        },
-                        data={'agent_id': 'dummyvalue'},
-                        verify=False
-                    )
-
-                    self.write_log_event(self.beaconing_uri, approximate_request_size(response.request), len(response.body))
-                else:
-                    response = requests.get(
-                        f'{self.args.protocol.lower()}://{self.args.destination}/{self.beaconing_uri}',
-                        headers={
-                            'user-agent': 'Beaconing Simulation Script for Threat Hunting and Attack Simulation',
-                            'accept': '*/*',
-                            'cache-control': 'no-cache'
-                        },
-                        params={'agent_id': 'dummyvalue'},
-                        verify=False
-                    )
-
-                    self.write_log_event(self.beaconing_uri, approximate_request_size(response.request), len(response.body))
-            except Exception as e:
-                print('oh no :\'( ', e)
 
 
     def noise_log_only(self, domain: str):
@@ -214,12 +144,102 @@ class HttpBeacon(Beacon):
             "DeviceName": "{self.HOSTNAME}", \
             "DestinationHostName": "{domain}", \
             "DestinationIP": "{self.USER_ACTIVITY_IPS[domain]}", \
-            "RequestMethods": "{self.args.request_method}", \
-            "Protocol": "{self.args.protocol}", \
+            "RequestMethod": "GET", \
+            "Protocol": "HTTPS", \
             "RequestURL": "https://{domain}/{random_uri}", \
             "SentBytes": {random.randint(150, 600)}, \
             "ReceivedBytes": {random.randint(150, 300000)}'''.replace('    ', ''))
         self.fake_timestamp += timedelta(milliseconds=random.randint(100, 400))  # seems like appropriate values. can be changed though
+
+
+    def c2_iteration(self):
+        """
+        one beaconing iteration of the simulation with active c2 communication
+        one iteration consists of multiple requests immitating how commands and results go back and forth for a while
+        """
+        for i in range(random.randint(1, 5)):  # up to X commands at once
+            if self.args.use_dynamic_urls:
+                self.command_uri = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
+                self.exfil_uri   = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
+
+            if self.args.log_only:
+                self.c2_iteration_log_only()
+            else:
+                try:
+                    pass  # TODO requires a server-side
+                except Exception:
+                    pass
+
+
+    def exfil_iteration(self):
+        """
+        one beaconing iteration of the simulation with data exfiltration
+        """
+        if self.args.use_dynamic_urls:
+            self.exfil_uri = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
+
+        if self.args.log_only:
+            self.exfil_iteration_log_only()
+        else:
+            try:
+                pass  # TODO requires a server-side
+            except Exception:
+                pass
+
+
+    def normal_iteration(self):
+        """
+        one normal beaconing iteration of the simulation
+        """
+        if self.args.use_dynamic_urls:
+            self.beaconing_uri = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
+
+        if self.args.log_only:
+            self.normal_iteration_log_only()
+        else:  # TODO requires a server-side
+            try:
+                # TODO check response code?
+                if self.args.request_method == 'POST':
+                    response = requests.post(
+                        f'{self.args.protocol.lower()}://{self.args.destination}/{self.beaconing_uri}',
+                        headers={
+                            'user-agent': 'Beaconing Simulation Script for Threat Hunting and Attack Simulation',
+                            'accept': '*/*',
+                            # 'cache-control': 'no-cache'
+                        },
+                        data={'agent_id': 'dummyvalue'},
+                        verify=False
+                    )
+
+                    self.write_log_event(self.beaconing_uri, approximate_request_size(response.request), len(response.body))
+                elif self.args.request_method == 'PUT':
+                    response = requests.put(
+                        f'{self.args.protocol.lower()}://{self.args.destination}/{self.beaconing_uri}',
+                        headers={
+                            'user-agent': 'Beaconing Simulation Script for Threat Hunting and Attack Simulation',
+                            'accept': '*/*',
+                            # 'cache-control': 'no-cache'
+                        },
+                        params={'agent_id': 'dummyvalue'},
+                        data={'agent_id': 'dummyvalue'},
+                        verify=False
+                    )
+                else:
+                    # default to GET
+                    response = requests.get(
+                        f'{self.args.protocol.lower()}://{self.args.destination}/{self.beaconing_uri}',
+                        headers={
+                            'user-agent': 'Beaconing Simulation Script for Threat Hunting and Attack Simulation',
+                            'accept': '*/*',
+                            # 'cache-control': 'no-cache'
+                        },
+                        params={'agent_id': 'dummyvalue'},
+                        verify=False
+                    )
+
+                    self.write_log_event(self.beaconing_uri, approximate_request_size(response.request), len(response.body))
+            except Exception as e:
+                print('oh no :\'( ', e)
 
 
     def noise(self):
@@ -234,7 +254,7 @@ class HttpBeacon(Beacon):
             headers={
                 'user-agent': 'Beaconing Simulation Script for Threat Hunting and Attack Simulation',
                 'accept': '*/*',
-                'cache-control': 'no-cache'
+                # 'cache-control': 'no-cache'
             },
             verify=False
         )
@@ -244,8 +264,8 @@ class HttpBeacon(Beacon):
             "DeviceName": "{self.HOSTNAME}", \
             "DestinationHostName": "{domain}", \
             "DestinationIP": "{self.USER_ACTIVITY_IPS[domain]}", \
-            "RequestMethods": "{self.args.request_method}", \
-            "Protocol": "{self.args.protocol}", \
+            "RequestMethod": "GET", \
+            "Protocol": "HTTPS", \
             "RequestURL": "https://{domain}/{random_uri}", \
             "SentBytes": {self.approximate_request_size(response.request)}, \
             "ReceivedBytes": {len(response.body)}'''.replace('    ', ''))
