@@ -25,7 +25,11 @@ class HttpBeacon(Beacon):
         self.default_request_size  = random.randint(150, 400)
 
 
-    def approximate_request_size(request) -> int:
+    def clean_up(self, **kwargs):
+        pass  # no clean up required
+
+
+    def approximate_request_size(self, request) -> int:
         """
         approximate a http request's size for logging. the requests/aiohttp library does not implement this
         dirty implementation, but why not. this is a simple script after all
@@ -51,7 +55,7 @@ class HttpBeacon(Beacon):
         except Exception:
             pass
         try:
-            size += request.body if request.body else 0
+            size += request.body if 'body' in request else 0
         except Exception:
             pass
         return size
@@ -69,8 +73,8 @@ class HttpBeacon(Beacon):
             "RequestMethod": "{self.args.request_method}", \
             "Protocol": "{self.args.protocol}", \
             "RequestURL": "{self.args.protocol.lower()}://{self.args.destination}/{uri}", \
-            "SentBytes": {sent_bytes}, \
-            "ReceivedBytes": {received_bytes}'''.replace('    ', ''))
+            "SentBytes": {int(sent_bytes)}, \
+            "ReceivedBytes": {int(received_bytes)}'''.replace('    ', ''))
 
 
     def c2_iteration_log_only(self):
@@ -211,7 +215,7 @@ class HttpBeacon(Beacon):
                         verify=False
                     )
 
-                    self.write_log_event(self.beaconing_uri, approximate_request_size(response.request), len(response.body))
+                    self.write_log_event(self.beaconing_uri, self.approximate_request_size(response.request), len(response.text))
                 elif self.args.request_method == 'PUT':
                     response = requests.put(
                         f'{self.args.protocol.lower()}://{self.args.destination}/{self.beaconing_uri}',
@@ -237,7 +241,7 @@ class HttpBeacon(Beacon):
                         verify=False
                     )
 
-                    self.write_log_event(self.beaconing_uri, approximate_request_size(response.request), len(response.body))
+                    self.write_log_event(self.beaconing_uri, self.approximate_request_size(response.request), len(response.text))
             except Exception as e:
                 print('oh no :\'( ', e)
 
@@ -268,4 +272,4 @@ class HttpBeacon(Beacon):
             "Protocol": "HTTPS", \
             "RequestURL": "https://{domain}/{random_uri}", \
             "SentBytes": {self.approximate_request_size(response.request)}, \
-            "ReceivedBytes": {len(response.body)}'''.replace('    ', ''))
+            "ReceivedBytes": {len(response.text)}'''.replace('    ', ''))

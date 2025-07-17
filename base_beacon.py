@@ -3,6 +3,7 @@ import logging
 import random
 import socket
 import string
+import time
 
 from concurrent_log_handler import ConcurrentRotatingFileHandler
 from datetime               import datetime, timedelta, timezone
@@ -130,6 +131,17 @@ class Beacon():
         else:
             self.message_logger.info(f'simulation will run at least {round((self.args.interval/60)*self.args.max_requests + self.args.absence, 2)} minutes.')
             # TODO do a check whether the destination is reachable
+
+
+    @abc.abstractmethod
+    def clean_up(self, **kwargs):
+        """
+        execute any code needed to clean up for the specific beacon type. e.g. terminate connections
+
+        Args:
+            needs to receive kwargs as required for the type of beacon
+        """
+        raise NotImplementedError('Method must be implemented in child classes')
 
 
     def sleep(self):

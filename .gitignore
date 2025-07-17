@@ -1,4 +1,5 @@
 __pycache__
+venv
 
 .__beaconing_simulation_events.lock
 .__beaconing_simulation_messages.lock

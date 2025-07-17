@@ -11,15 +11,14 @@ a python script to simulate malware beaconing in a slightly more sophistocated w
 - simulate parallel user activity as background noise
 - run the simulation in a "log only" mode, not making any actual network requests, but writing a log file which should look similar to what your proxy/etc. would produce
 - jitter, intervals and maximum number of requests obviously
-- TODO support of multiple protocols
-- TODO support of more http methods
+- support of multiple protocols and http methods (more tbd)
 - TODO support of round robin c2 servers
 
 
 ## usage
 
 ```
-usage: beaconing_simulation.py [-h] [--jitter JITTER] [--protocol {HTTP,HTTPS,SOCKS,DSDDDDDDD}] [--request_method {GET,POST,PUT}] [--use_dynamic_urls] [--absence ABSENCE] [--no_c2]
+usage: beaconing_simulation.py [-h] [--jitter JITTER] [--protocol {HTTP,HTTPS,SOCKS,WEBSOCKET}] [--request_method {GET,POST,PUT}] [--use_dynamic_urls] [--absence ABSENCE] [--no_c2]
                                [--active_c2_ratio ACTIVE_C2_RATIO] [--reduce_interval_after_c2] [--no_exfil] [--exfil_chunking {NONE,HEADER,URI}] [--no_noise] [--log_only] [--start_time START_TIME]
                                [--static_ip]
                                destination interval max_requests
@@ -32,7 +31,7 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   --jitter JITTER       add random jitter to the time intervals between the beaconing requests (in percent of intervals). default is 10 percent
-  --protocol {HTTP,HTTPS,SOCKS,DSDDDDDDD}
+  --protocol {HTTP,HTTPS,SOCKS,WEBSOCKET}
                         network protocol to use for beaconing communication. default is http
   --request_method {GET,POST,PUT}
                         if using http, the request method to use for beaconing. default is get

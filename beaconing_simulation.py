@@ -107,7 +107,7 @@ parser.add_argument("destination", help="beaconing destination. i.e. the c2 serv
 parser.add_argument("interval", help="default beaconing interval (in seconds). default is 30 seconds", type=int, default=30)
 parser.add_argument("max_requests", help="end the simulation after X requests. default is 720 requests, equating to ~6 hours with a 30 second interval", type=int, default=720)
 parser.add_argument("--jitter", help="add random jitter to the time intervals between the beaconing requests (in percent of intervals). default is 10 percent", type=int, default=17)
-parser.add_argument("--protocol", help="network protocol to use for beaconing communication. default is http", type=str, choices=['HTTP', 'HTTPS', 'SOCKS', 'DSDDDDDDD'], default='HTTP')  # TODO choices=['DNS', 'TCP', 'UDP', 'WEBSOCKET']
+parser.add_argument("--protocol", help="network protocol to use for beaconing communication. default is http", type=str, choices=['HTTP', 'HTTPS', 'SOCKS', 'WEBSOCKET'], default='HTTP')  # TODO choices=['DNS', 'TCP', 'UDP', '...']
 parser.add_argument("--request_method", help="if using http, the request method to use for beaconing. default is get", type=str, choices=['GET', 'POST', 'PUT'], default='GET')  # TODO HEAD?
 parser.add_argument("--use_dynamic_urls", help="if using http, use a new randomly generated uri path on each request. default is false", action="store_true", default=False)
 parser.add_argument("--absence", help="make a significant pause of X minutes during the test to simulate the device being offline/sleeping/... default is no absence", type=int, default=0)
@@ -156,6 +156,7 @@ if __name__ == "__main__":
 
             if beacon.done:
                 beacon.message_logger.info(f'done. have a nice day :)')
+                beacon.clean_up()
                 exit(0)
     except KeyboardInterrupt:
         pass
