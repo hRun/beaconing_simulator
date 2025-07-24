@@ -40,12 +40,12 @@ class WebSocketClient:
 class WebsocketBeacon(Beacon):
     def __init__(self, args):
         super().__init__(args)
-        self.default_response_size = random.randint(200, 7000)  # default response size heavily depends on the maleable profile (e.g. whether it's configured to return a legitimate-looking web page, etc. or not)
-        self.default_request_size  = random.randint(400, 750)
+        self.default_response_size = random.randint(200, 2000000)  # default response size heavily depends on the maleable profile (e.g. whether it's configured to return a legitimate-looking web page, etc. or not)
+        self.default_request_size  = random.randint(400, 7500)
         self.total_bytes_sent      = 0
         self.total_bytes_received  = 0
 
-        self.write_log_event(self.beaconing_uri, 270 + self.data_jitter(), 279 + self.data_jitter(), 'HTTPS', 'GET')
+        self.write_log_event(self.beaconing_uri, self.jitter_data(270), self.jitter_data(279), 'HTTPS', 'GET')
 
         if not self.args.log_only:
             try:
@@ -141,8 +141,8 @@ class WebsocketBeacon(Beacon):
         """
         one iteration of the simulation where events are only logged, no actual request is dispatched
         """
-        self.total_bytes_sent     += self.default_request_size + self.data_jitter()
-        self.total_bytes_received += self.default_response_size + self.data_jitter()
+        self.total_bytes_sent     += self.jitter_data(self.default_request_size)
+        self.total_bytes_received += self.jitter_data(self.default_response_size)
         self.fake_timestamp       += timedelta(milliseconds=random.randint(100, 400))  # seems like appropriate values. can be changed though
 
 

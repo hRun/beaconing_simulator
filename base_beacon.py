@@ -123,7 +123,7 @@ class Beacon():
             if args.active_c2_ratio > 50.0:
                 self.COMMAND_RATIO = 10.0  # don't accept unreasonable large values
 
-            self.message_logger.info(f'{self.COMMAND_RATIO}% of requests will simulate active usage of the c2 channel.')
+            self.message_logger.info(f'{round(self.COMMAND_RATIO, 3)}% of requests will simulate active usage of the c2 channel.')
 
         if args.absence > 0:
             self.ABSENCE_START = random.randint(int(self.args.max_requests*0.4), int(self.args.max_requests*0.8))  # start absence interval after x requests
@@ -140,11 +140,14 @@ class Beacon():
             # TODO do a check whether the destination is reachable
 
 
-    def data_jitter(self):
+    def jitter_data(self, data_size):
         """
-        return a random value to add or substract from sent data as jitter (currently somewhat hard-coded instead of percentual)
+        add or substract a configurable percentage of jitter to provided data size and return the total
         """
-        return random.randint(-200, 400)
+        jitter = random.uniform(-1.0*(data_size/100)*self.args.data_jitter, 1.0*(data_size/100)*self.args.data_jitter)
+        jitter = random.uniform(0.8, 1.15)*data_size if data_size + jitter < 0 else jitter  # can't send negative data, set a reasonable value instead
+
+        return int(data_size + jitter)
 
 
     def next_destination(self):

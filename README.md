@@ -18,9 +18,9 @@ a python script to simulate malware beaconing in a slightly more sophistocated w
 ## usage
 
 ```
-usage: beaconing_simulation.py [-h] [--absence ABSENCE] [--active_c2_ratio ACTIVE_C2_RATIO] [--exfil_chunking {NONE,HEADER,URI}] [--jitter JITTER] [--log_only] [--no_c2] [--no_exfil] [--no_noise]
-                               [--protocol {HTTP,HTTPS,SOCKS,WEBSOCKET}] [--reduce_interval_after_c2] [--request_method {GET,POST,PUT}] [--start_time START_TIME] [--static_ip] [--use_dynamic_urls]
-                               [--use_round_robin {NONE,RANDOM,1,5,10,50,100}] [--round_robin_domains ROUND_ROBIN_DOMAINS]
+usage: beaconing_simulation.py [-h] [--absence ABSENCE] [--active_c2_ratio ACTIVE_C2_RATIO] [--data_jitter DATA_JITTER] [--exfil_chunking {NONE,HEADER,URI}] [--jitter JITTER] [--log_only] [--no_c2]
+                               [--no_exfil] [--no_noise] [--protocol {HTTP,HTTPS,SOCKS,WEBSOCKET}] [--reduce_interval_after_c2] [--request_method {GET,POST,PUT}] [--start_time START_TIME] [--static_ip]
+                               [--use_dynamic_urls] [--use_round_robin {NONE,RANDOM,1,5,10,50,100}] [--round_robin_domains ROUND_ROBIN_DOMAINS]
                                destination interval max_requests
 
 positional arguments:
@@ -33,10 +33,12 @@ options:
   --absence ABSENCE     make a significant pause of X minutes during the test to simulate the device being offline/sleeping/... default is no absence
   --active_c2_ratio ACTIVE_C2_RATIO
                         the percentage of requests which should simulate active usage of the c2 channel. i.e. command and result exchange. default is between 0.1 and 3 percent
+  --data_jitter DATA_JITTER
+                        if log_only is set, add random jitter to the request and response sizes (in percent). default is 11 percent
   --exfil_chunking {NONE,HEADER,URI}
                         use chunking when exfiltrating data. i.e. send many small requests with data contained in unique headers or uris instead of one large one (in protocols where applicable). default is to
                         not use chunking
-  --jitter JITTER       add random jitter to the time intervals between the beaconing requests (in percent of intervals). default is 10 percent
+  --jitter JITTER       add random jitter to the time intervals between the beaconing requests (in percent of intervals). default is 17 percent
   --log_only            only write log events as they would be expected from the simulation, don't actually dispatch requests. default is to make real requests
   --no_c2               don't simulate the beacon receiving instructions from the c2 server (i.e. some larger responses, followed by larger requests, followed by temporary slower beaconing). default is to
                         simulate c2 activity

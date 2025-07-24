@@ -21,8 +21,8 @@ class SocksBeacon(Beacon):
 
     def __init__(self, args):
         super().__init__(args)
-        self.default_response_size = random.randint(200, 7000)  # default response size heavily depends on the maleable profile (e.g. whether it's configured to return a legitimate-looking web page, etc. or not)
-        self.default_request_size  = random.randint(400, 750)
+        self.default_response_size = random.randint(200, 2000000)  # default response size heavily depends on the maleable profile (e.g. whether it's configured to return a legitimate-looking web page, etc. or not)
+        self.default_request_size  = random.randint(400, 7500)
 
 
     def clean_up(self, **kwargs):
@@ -87,14 +87,14 @@ class SocksBeacon(Beacon):
 
         for i in range(chunks):
             if random.randint(1, 2) == 1:
-                self.write_log_event(self.beaconing_uri, self.default_request_size, self.default_response_size + self.data_jitter(), 'GET')  # continuation of "empty" requests
+                self.write_log_event(self.beaconing_uri, self.default_request_size, self.jitter_data(self.default_response_size), 'GET')  # continuation of "empty" requests
 
-            self.write_log_event(f'{self.command_uri}?{''.join(random.choices(string.ascii_letters + string.digits, k=6))}={''.join(random.choices(string.ascii_letters + string.digits, k=24))}', exfil_size/chunks, self.default_response_size + self.data_jitter(), 'POST')
-            self.write_log_event(self.command_uri, self.default_request_size*random.randint(5, 10) + self.data_jitter(), self.default_response_size + self.data_jitter(), 'GET')
+            self.write_log_event(f'{self.command_uri}?{''.join(random.choices(string.ascii_letters + string.digits, k=6))}={''.join(random.choices(string.ascii_letters + string.digits, k=24))}', exfil_size/chunks, self.jitter_data(self.default_response_size), 'POST')
+            self.write_log_event(self.command_uri, self.jitter_data(self.default_request_size*random.randint(5, 10)), self.jitter_data(self.default_response_size), 'GET')
 
             if random.randint(1, 2) == 1:
-                self.write_log_event(self.beaconing_uri, self.default_request_size, self.default_response_size + self.data_jitter(), 'GET')  # continuation of "empty" requests
-            self.write_log_event(self.beaconing_uri, self.default_request_size, self.default_response_size + self.data_jitter(), 'GET')  # continuation of "empty" requests
+                self.write_log_event(self.beaconing_uri, self.default_request_size, self.jitter_data(self.default_response_size), 'GET')  # continuation of "empty" requests
+            self.write_log_event(self.beaconing_uri, self.default_request_size, self.jitter_data(self.default_response_size), 'GET')  # continuation of "empty" requests
 
             self.fake_timestamp += timedelta(milliseconds=random.randint(25, 100))  # seems like appropriate values. can be changed though
 
@@ -114,7 +114,7 @@ class SocksBeacon(Beacon):
         """
         one iteration of the simulation where events are only logged, no actual request is dispatched
         """
-        self.write_log_event(self.beaconing_uri, self.default_request_size + self.data_jitter(), self.default_response_size + self.data_jitter(), 'GET')
+        self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.jitter_data(self.default_response_size), 'GET')
         self.fake_timestamp += timedelta(milliseconds=random.randint(100, 400))  # seems like appropriate values. can be changed though
 
 
