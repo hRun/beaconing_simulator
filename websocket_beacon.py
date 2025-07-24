@@ -109,11 +109,11 @@ class WebsocketBeacon(Beacon):
             {fake_time_generated if self.args.log_only else ""} \
             "SourceUserName": "{self.USER}", \
             "DeviceName": "{self.HOSTNAME}", \
-            "DestinationHostName": "{self.destination_domain}", \
-            "DestinationIP": "{self.destination_ip if self.args.static_ip else random.choice(self.destination_ip_list)}", \
+            "DestinationHostName": "{self.destinations[self.last_destination]['domain']}", \
+            "DestinationIP": "{self.destinations[self.last_destination]['ips'][0] if self.args.static_ip else random.choice(self.destinations[self.last_destination]['ips'])}", \
             "RequestMethod": "{request_method}", \
             "Protocol": "{protocol}", \
-            "RequestURL": "{'wss' if protocol == 'WEBSOCKET_SSL' else protocol.lower()}://{self.args.destination}/{uri}", \
+            "RequestURL": "{'wss' if protocol == 'WEBSOCKET_SSL' else protocol.lower()}://{self.destinations[self.last_destination]['primary']}/{uri}", \
             "SentBytes": {int(sent_bytes)}, \
             "ReceivedBytes": {int(received_bytes)}'''.replace('    ', ''))
 

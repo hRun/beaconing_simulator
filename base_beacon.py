@@ -59,15 +59,13 @@ class Beacon():
         self.args                       = args
         self.beaconing_uri: str         = 'ping'
         self.command_uri: str           = 'command'
-        self.destination_domain: str    = ''
-        self.destination_ip: str        = ''
-        self.destination_ip_list: list  = []
+        self.destinations: list         = []  # {'domain': '', 'ips': [], 'primary': ''}
         self.done: bool                 = False
         self.exfil_uri: str             = 'exfil'
-        self.fake_timestamp: datetime   = datetime.now(timezone.utc) if args.start_time == 0 else datetime.fromtimestamp(args.start_time) # format is strftime('%m/%d/%Y %H:%M:%S.%.3f %p')
+        self.fake_timestamp: datetime   = datetime.now(timezone.utc) if self.args.start_time == 0 else datetime.fromtimestamp(self.args.start_time) # format is strftime('%m/%d/%Y %H:%M:%S.%.3f %p')
+        self.last_destination: int      = 0
         self.reduction_count: int       = 0
         self.reduction_time:  int       = 0
-        self.response                   = None
 
 
         print('resolving hostnames and ips... starting in a second...')
@@ -77,24 +75,33 @@ class Beacon():
             except Exception:
                 self.USER_ACTIVITY_IPS[i] = 'N/A'
 
-        if args.destination.replace('.', '').isdigit():
-            # ip was specified as destination
-            self.destination_ip = self.args.destination
+        destination_buffer:list = [self.args.destination]
 
-            try:
-                self.destination_domain = socket.gethostbyaddr(self.args.destination)[0]
-            except Exception:
-                self.destination_domain = 'N/A'
-        else:
-            # domain was specified as destination
-            self.destination_domain = self.args.destination
+        if self.args.use_round_robin:
+            destination_buffer += self.args.use_round_robin.split(',')
 
-            try:
-                self.destination_ip_list = list({addr[-1][0] for addr in socket.getaddrinfo(self.args.destination, 0, 0, 0, 0)})
-            except Exception:
-                self.destination_ip_list = ['N/A']
-            self.destination_ip = self.destination_ip_list[0]  # always takes the first ip, even if multiple were returned
+        for i in destination_buffer:
+            destination_obj = {}
 
+            if i.replace('.', '').isdigit():
+                # ip was specified as destination
+                destination_obj['ips']     = [i]
+                destination_obj['primary'] = i
+
+                try:
+                    destination_obj['domain'] = socket.gethostbyaddr(i)[0]  # socket.gethostbyaddr(i)[1] would be a possibly empty list of alternative hostnames
+                except Exception:
+                    destination_obj['domain'] = 'N/A'
+            else:
+                # domain was specified as destination
+                destination_obj['domain']  = i
+                destination_obj['primary'] = i
+
+                try:
+                    destination_obj['ips'] = list({addr[-1][0] for addr in socket.getaddrinfo(i, 0, 0, 0, 0)})
+                except Exception:
+                    destination_obj['ips'] = ['N/A']
+            self.destinations.append(destination_obj)
 
         self.message_logger.info(f'starting simulation...')
 
@@ -105,7 +112,7 @@ class Beacon():
         if args.jitter < 0:
             self.args.jitter = 0
 
-        self.message_logger.info(f'will dispatch {self.args.max_requests} requests towards "{self.args.destination}" with an interval of {self.args.interval} seconds and {self.args.jitter}% jitter before ending the simulation.')
+        self.message_logger.info(f'will dispatch {self.args.max_requests} requests towards "{', '.join(destination_buffer)}" with an interval of {self.args.interval} seconds and {self.args.jitter}% jitter before ending the simulation.')
         self.message_logger.info(f'{"" if not self.args.no_noise else "no"} background noise as users would generate it will be simulated.')
 
         if not args.no_c2:
@@ -127,21 +134,37 @@ class Beacon():
             self.message_logger.info(f'data exfiltration will be simulated after {self.EXFIL_START} requests. {"data chunking will be used for exfiltration." if self.args.exfil_chunking != "NONE" else ""}')
 
         if args.log_only:
-            self.message_logger.info(f'simulation will run in log-only mode. no actual requests will be dispatched.')
+            self.message_logger.info(f'simulation will run in log-only mode. no actual requests will be dispatched. this should be done in a few seconds')
         else:
             self.message_logger.info(f'simulation will run at least {round((self.args.interval/60)*self.args.max_requests + self.args.absence, 2)} minutes.')
             # TODO do a check whether the destination is reachable
 
 
-    @abc.abstractmethod
-    def clean_up(self, **kwargs):
+    def data_jitter(self):
         """
-        execute any code needed to clean up for the specific beacon type. e.g. terminate connections
+        return a random value to add or substract from sent data as jitter (currently somewhat hard-coded instead of percentual)
+        """
+        return random.randint(-200, 400)
 
-        Args:
-            needs to receive kwargs as required for the type of beacon
+
+    def next_destination(self):
         """
-        raise NotImplementedError('Method must be implemented in child classes')
+        jump to the next domain when using round robin
+        """
+        if self.args.use_round_robin:
+            if self.last_destination >= len(self.destinations)-1:
+                self.last_destination = 0
+            else:
+                self.last_destination += 1
+        else:
+            self.last_destination = 0
+
+
+    def resolve_destination(self):
+        """
+        resolve a destination 
+        """
+        return random.randint(-200, 400)
 
 
     def sleep(self):
@@ -167,12 +190,15 @@ class Beacon():
                 self.reduction_count -= 1
 
 
-    def data_jitter(self):
+    @abc.abstractmethod
+    def clean_up(self, **kwargs):
         """
-        return a random value to add or substract from sent data as jitter (currently somewhat hard-coded instead of percentual)
-        """
-        return random.randint(-200, 400)
+        execute any code needed to clean up for the specific beacon type. e.g. terminate connections
 
+        Args:
+            needs to receive kwargs as required for the type of beacon
+        """
+        raise NotImplementedError('Method must be implemented in child classes')
 
 
     @abc.abstractmethod

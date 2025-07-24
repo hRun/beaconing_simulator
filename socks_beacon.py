@@ -68,11 +68,11 @@ class SocksBeacon(Beacon):
             {fake_time_generated if self.args.log_only else ""} \
             "SourceUserName": "{self.USER}", \
             "DeviceName": "{self.HOSTNAME}", \
-            "DestinationHostName": "{self.destination_domain}", \
-            "DestinationIP": "{self.destination_ip if self.args.static_ip else random.choice(self.destination_ip_list)}", \
+            "DestinationHostName": "{self.destinations[self.last_destination]['domain']}", \
+            "DestinationIP": "{self.destinations[self.last_destination]['ips'][0] if self.args.static_ip else random.choice(self.destinations[self.last_destination]['ips'])}", \
             "RequestMethod": "{request_method}", \
             "Protocol": "HTTP", \
-            "RequestURL": "http://{self.args.destination}/{uri}", \
+            "RequestURL": "http://{self.destinations[self.last_destination]['primary']}/{uri}", \
             "SentBytes": {int(sent_bytes)}, \
             "ReceivedBytes": {int(received_bytes)}'''.replace('    ', ''))
 
@@ -157,6 +157,8 @@ class SocksBeacon(Beacon):
                 except Exception:
                     pass
 
+        self.next_destination()
+
 
     def exfil_iteration(self):
         """
@@ -172,6 +174,8 @@ class SocksBeacon(Beacon):
                 pass  # TODO requires a server-side
             except Exception:
                 pass
+
+        self.next_destination()
 
 
     def normal_iteration(self):
@@ -200,6 +204,8 @@ class SocksBeacon(Beacon):
                 self.write_log_event(self.beaconing_uri, self.approximate_request_size(response.request), len(response.text), 'GET')
             except Exception as e:
                 print('oh no :\'( ', e)
+
+        self.next_destination()
 
 
     def noise(self):
