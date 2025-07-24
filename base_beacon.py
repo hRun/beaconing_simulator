@@ -77,8 +77,8 @@ class Beacon():
 
         destination_buffer:list = [self.args.destination]
 
-        if self.args.use_round_robin:
-            destination_buffer += self.args.use_round_robin.split(',')
+        if self.args.use_round_robin != 'NONE':
+            destination_buffer += self.args.round_robin_domains.split(',')
 
         for i in destination_buffer:
             destination_obj = {}
@@ -151,7 +151,7 @@ class Beacon():
         """
         jump to the next domain when using round robin
         """
-        if self.args.use_round_robin:
+        if self.args.use_round_robin != 'NONE':
             if self.last_destination >= len(self.destinations)-1:
                 self.last_destination = 0
             else:

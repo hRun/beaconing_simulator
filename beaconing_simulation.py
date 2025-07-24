@@ -38,6 +38,8 @@ def simulate_beaconing():
     Args:
         session: asynchonous http session
     """
+    round_robin_tracker = 1
+
     for i in range(beacon.args.max_requests):
         beacon.sleep()
 
@@ -75,6 +77,32 @@ def simulate_beaconing():
             continue
 
         beacon.normal_iteration()
+
+        if beacon.args.use_round_robin == '1':
+            if round_robin_tracker == 1:
+                beacon.next_destination()
+                round_robin_tracker = 1
+        elif beacon.args.use_round_robin == '5':
+            if round_robin_tracker == 5:
+                beacon.next_destination()
+                round_robin_tracker = 1
+        elif beacon.args.use_round_robin == '10':
+            if round_robin_tracker == 10:
+                beacon.next_destination()
+                round_robin_tracker = 1
+        elif beacon.args.use_round_robin == '50':
+            if round_robin_tracker == 50:
+                beacon.next_destination()
+                round_robin_tracker = 1
+        elif beacon.args.use_round_robin == '100':
+            if round_robin_tracker == 100:
+                beacon.next_destination()
+                round_robin_tracker = 1
+        elif beacon.args.use_round_robin == 'RANDOM':
+            if random.randint(1, 100) < 20:
+                beacon.next_destination()
+
+        round_robin_tracker += 1
 
     beacon.done = True
 
@@ -120,7 +148,8 @@ parser.add_argument("--request_method", help="if using http, the request method 
 parser.add_argument("--start_time", help="if log_only is set, set the start time of the fake simulation (epoch time stamp expected). otherwise the simulation will start at the current time and end in the future", type=int, default=0)
 parser.add_argument("--static_ip", help="a domain might resolve to multiple ips (e.g. when a cdn is used). set this argument to statically log the first observed ip. default is to log a random ip from the set", action="store_true", default=False)
 parser.add_argument("--use_dynamic_urls", help="if using http, use a new randomly generated uri path on each request. default is false", action="store_true", default=False)
-parser.add_argument("--use_round_robin", help="iterate through a number of destinations instead of using just one (comma-separated list of fqdns or ips besides the primary one)", type=str)
+parser.add_argument("--use_round_robin", help="iterate through a number of destinations instead of using just one. switch domains after every x requests or randomly. default is no round robin", type=str, choices=['NONE', 'RANDOM', '1', '5', '10', '50', '100'], default='NONE')
+parser.add_argument("--round_robin_domains", help="comma-separated list of domains, hosts or ips to use for round robin besides the primary one", type=str)
 args   = parser.parse_args()
 beacon = None
 

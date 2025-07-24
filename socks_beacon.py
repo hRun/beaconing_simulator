@@ -157,8 +157,6 @@ class SocksBeacon(Beacon):
                 except Exception:
                     pass
 
-        self.next_destination()
-
 
     def exfil_iteration(self):
         """
@@ -174,8 +172,6 @@ class SocksBeacon(Beacon):
                 pass  # TODO requires a server-side
             except Exception:
                 pass
-
-        self.next_destination()
 
 
     def normal_iteration(self):
@@ -204,8 +200,6 @@ class SocksBeacon(Beacon):
                 self.write_log_event(self.beaconing_uri, self.approximate_request_size(response.request), len(response.text), 'GET')
             except Exception as e:
                 print('oh no :\'( ', e)
-
-        self.next_destination()
 
 
     def noise(self):

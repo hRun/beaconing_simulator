@@ -8,7 +8,7 @@ a python script to simulate malware beaconing in a slightly more sophistocated w
 - simulate the beacon halting for a period of time due to the compromised device being switched off / asleep / ...
 - simulate the beacon receiving a command from the c2 server: multiple larger responses and larger requests to immitate commands and execution results going back and forth for a few minutes. the beacon then slows down for a while assuming the operator works on the results
 - simulate the beacon exfiltrating data: a very large request followed by some silence
-- simulate usage of round robin
+- simulate usage of round robin in different modes
 - simulate parallel user activity as background noise
 - run the simulation in a "log only" mode, not making any actual network requests, but writing a log file which should look similar to what your proxy/etc. would produce
 - jitter, intervals and maximum number of requests obviously
@@ -20,7 +20,7 @@ a python script to simulate malware beaconing in a slightly more sophistocated w
 ```
 usage: beaconing_simulation.py [-h] [--absence ABSENCE] [--active_c2_ratio ACTIVE_C2_RATIO] [--exfil_chunking {NONE,HEADER,URI}] [--jitter JITTER] [--log_only] [--no_c2] [--no_exfil] [--no_noise]
                                [--protocol {HTTP,HTTPS,SOCKS,WEBSOCKET}] [--reduce_interval_after_c2] [--request_method {GET,POST,PUT}] [--start_time START_TIME] [--static_ip] [--use_dynamic_urls]
-                               [--use_round_robin USE_ROUND_ROBIN]
+                               [--use_round_robin {NONE,RANDOM,1,5,10,50,100}] [--round_robin_domains ROUND_ROBIN_DOMAINS]
                                destination interval max_requests
 
 positional arguments:
@@ -52,8 +52,10 @@ options:
                         if log_only is set, set the start time of the fake simulation (epoch time stamp expected). otherwise the simulation will start at the current time and end in the future
   --static_ip           a domain might resolve to multiple ips (e.g. when a cdn is used). set this argument to statically log the first observed ip. default is to log a random ip from the set
   --use_dynamic_urls    if using http, use a new randomly generated uri path on each request. default is false
-  --use_round_robin USE_ROUND_ROBIN
-                        iterate through a number of destinations instead of using just one (comma-separated list of fqdns or ips besides the primary one)
+  --use_round_robin {NONE,RANDOM,1,5,10,50,100}
+                        iterate through a number of destinations instead of using just one. switch domains after every x requests or randomly. default is no round robin
+  --round_robin_domains ROUND_ROBIN_DOMAINS
+                        comma-separated list of domains, hosts or ips to use for round robin besides the primary one
 ```
 
 
