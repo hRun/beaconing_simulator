@@ -190,12 +190,3 @@ if __name__ == "__main__":
                 exit(0)
     except KeyboardInterrupt:
         pass
-
-
-
-
-# TODO
-#     seems like with the current implemntation, command simulation generates too many events. probably needs bigger pauses / lower command runtime
-#     websocket / socks proxy -> mehmet, marco will test
-#     http get&post mix
-#     round robin
