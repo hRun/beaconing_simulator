@@ -29,7 +29,7 @@ class CustomArgObject():
     def __init__(self):
         self.destination: str               = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(8, 20))) + ['.com', '.cn', '.edu', '.io', '.nl'][random.randint(0, 4)]
         self.interval: int                  = random.randint(10, 1800)
-        self.max_requests: int              = random.randint(100,100)  # 720, 2500
+        self.max_requests: int              = random.randint(720, 2500)
         self.absence: int                   = 0 if random.randint(0, 100) < 70 else random.randint(4*60, 3*24*60)  # simulate 4h-3d absence in 30% of runs
         self.active_c2_ratio: float         = random.uniform(0.1, 3.0)
         self.data_jitter: int               = random.randint(11, 222)
