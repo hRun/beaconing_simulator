@@ -76,9 +76,7 @@ def simulate_beaconing(beacon):
         beacon.normal_iteration()
 
         if beacon.args.use_round_robin == '1':
-            if round_robin_tracker == 1:
-                beacon.next_destination()
-                round_robin_tracker = 1
+            beacon.next_destination()
         elif beacon.args.use_round_robin == '5':
             if round_robin_tracker == 5:
                 beacon.next_destination()
