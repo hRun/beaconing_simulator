@@ -83,7 +83,7 @@ class HttpBeacon(Beacon):
         """
         exfil_size = random.randint(5000, 30000)
 
-        self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.default_response_size + random.randint(600, 50000))  # receiving command (eventually including tooling)
+        self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.default_response_size + random.randint(600, 500000))  # receiving command (eventually including tooling)
         self.fake_timestamp += timedelta(milliseconds=random.randint(100, 400))
 
         # optional: send faster beacons for a while indicating to the operator that the command is running
@@ -112,7 +112,7 @@ class HttpBeacon(Beacon):
         exfil_duration = random.randint(30, 600)
         exfil_size     = random.randint(100000, 1000000) if self.args.request_method == 'GET' else random.randint(1000000, 10000000)
 
-        self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.default_response_size + random.randint(600, 50000))  # receiving exfil command (eventually including tooling)
+        self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.default_response_size + random.randint(600, 500000))  # receiving exfil command (eventually including tooling)
         self.fake_timestamp += timedelta(milliseconds=random.randint(100, 400))
 
         if self.chunk_size > 0 and exfil_size > self.chunk_size:

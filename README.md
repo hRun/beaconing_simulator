@@ -18,13 +18,13 @@ a python script to simulate malware beaconing in a slightly more sophistocated w
 ## usage
 
 ```
-usage: beaconing_simulation.py [-h] [--absence ABSENCE] [--active_c2_ratio ACTIVE_C2_RATIO] [--data_jitter DATA_JITTER] [--exfil_chunking {NONE,HEADER,URI}] [--jitter JITTER] [--log_only] [--no_c2]
-                               [--no_exfil] [--no_noise] [--protocol {HTTP,HTTPS,SOCKS,WEBSOCKET}] [--reduce_interval_after_c2] [--request_method {GET,POST,PUT}] [--start_time START_TIME] [--static_ip]
-                               [--use_dynamic_urls] [--use_round_robin {NONE,RANDOM,1,5,10,50,100}] [--round_robin_domains ROUND_ROBIN_DOMAINS]
-                               destination interval max_requests
+usage: beaconing_simulation.py [-h] [--absence ABSENCE] [--active_c2_ratio ACTIVE_C2_RATIO] [--data_jitter DATA_JITTER] [--jitter JITTER] [--log_only] [--no_c2] [--no_chunking] [--no_exfil] [--no_noise]
+                               [--protocol {HTTP,HTTPS,SOCKS,WEBSOCKET}] [--reduce_interval_after_c2] [--request_method {GET,POST,PUT}] [--start_time START_TIME] [--static_ip] [--use_dynamic_urls]
+                               [--round_robin_logic {RANDOM,1,5,10,50,100}]
+                               destinations interval max_requests
 
 positional arguments:
-  destination           beaconing destination. i.e. the c2 server (fqdn or ip)
+  destinations          one or more beaconing destination. i.e. the c2 servers (fqdns or ips). provide multiple destinations as comma-separated list
   interval              default beaconing interval (in seconds). default is 30 seconds
   max_requests          end the simulation after X requests. default is 720 requests, equating to ~6 hours with a 30 second interval
 
@@ -35,13 +35,11 @@ options:
                         the percentage of requests which should simulate active usage of the c2 channel. i.e. command and result exchange. default is between 0.1 and 3 percent
   --data_jitter DATA_JITTER
                         if log_only is set, add random jitter to the request and response sizes (in percent). default is 11 percent
-  --exfil_chunking {NONE,HEADER,URI}
-                        use chunking when exfiltrating data. i.e. send many small requests with data contained in unique headers or uris instead of one large one (in protocols where applicable). default is to
-                        not use chunking
   --jitter JITTER       add random jitter to the time intervals between the beaconing requests (in percent of intervals). default is 17 percent
   --log_only            only write log events as they would be expected from the simulation, don't actually dispatch requests. default is to make real requests
   --no_c2               don't simulate the beacon receiving instructions from the c2 server (i.e. some larger responses, followed by larger requests, followed by temporary slower beaconing). default is to
                         simulate c2 activity
+  --no_chunking         don't use chunking for http requests. i.e. send one large one instead of multiple small requests. default is to use chunking as many server have maximum sizes they handle
   --no_exfil            don't simulate the beacon exfiltrating data (similar to c2, but with significantly larger outflow). default is to simulate data exfiltration
   --no_noise            don't make semi-random, semi-realistic non-beaconing requests in the background to add noise (as user activity would). default is to make background noise
   --protocol {HTTP,HTTPS,SOCKS,WEBSOCKET}
@@ -54,10 +52,8 @@ options:
                         if log_only is set, set the start time of the fake simulation (epoch time stamp expected). otherwise the simulation will start at the current time and end in the future
   --static_ip           a domain might resolve to multiple ips (e.g. when a cdn is used). set this argument to statically log the first observed ip. default is to log a random ip from the set
   --use_dynamic_urls    if using http, use a new randomly generated uri path on each request. default is false
-  --use_round_robin {NONE,RANDOM,1,5,10,50,100}
-                        iterate through a number of destinations instead of using just one. switch domains after every x requests or randomly. default is no round robin
-  --round_robin_domains ROUND_ROBIN_DOMAINS
-                        comma-separated list of domains, hosts or ips to use for round robin besides the primary one
+  --round_robin_logic {RANDOM,1,5,10,50,100}
+                        set the logic to iterate destinations when multiple were provided. switch domains after every x requests or randomly
 ```
 
 
