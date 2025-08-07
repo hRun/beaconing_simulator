@@ -5,3 +5,4 @@ venv
 .__beaconing_simulation_messages.lock
 beaconing_simulation_events.log
 beaconing_simulation_messages.log
+beaconing_simulation_logs/

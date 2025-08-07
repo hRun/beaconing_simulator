@@ -27,7 +27,11 @@ class CustomArgObject():
     """
  
     def __init__(self):
-        self.destination: str               = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(8, 20))) + ['.com', '.cn', '.edu', '.io', '.nl'][random.randint(0, 4)]
+        destination_count: int = 1 if random.randint(0, 100) < 50 else random.randint(2, 6)  # 1 domain only in 50% of cases
+        self.destinations: str = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(8, 20))) + ['.com', '.cn', '.edu', '.io', '.nl'][random.randint(0, 4)] \
+                                 if destination_count == 1 \
+                                 else ','.join([''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(8, 20))) + ['.com', '.cn', '.edu', '.io', '.nl'][random.randint(0, 4)] for i in range(destination_count)])
+
         self.interval: int                  = random.randint(10, 1800)
         self.max_requests: int              = random.randint(720, 2500)
         self.absence: int                   = 0 if random.randint(0, 100) < 70 else random.randint(4*60, 3*24*60)  # simulate 4h-3d absence in 30% of runs
@@ -35,7 +39,7 @@ class CustomArgObject():
         self.data_jitter: int               = random.randint(11, 222)
         self.jitter: int                    = random.randint(17, 83)
         self.log_only: bool                 = True
-        self.no_c2: bool                    = True if random.randint(0, 100) < 15 else False  # don't simulate active c2 usage in only 15% of runs
+        self.no_c2: bool                    = True if random.randint(0, 100) < 5 else False  # don't simulate active c2 usage in only 5% of runs
         self.no_chunking: bool              = False
         self.no_exfil: bool                 = True if random.randint(0, 100) < 30 else False  # don't simulate data exfiltration in only 30% of runs
         self.no_noise: bool                 = True  # background noise is not necessary for our purposes
@@ -45,8 +49,7 @@ class CustomArgObject():
         self.start_time: int                = 1753707644 - random.randint(0, 31536000)  # between 2024-07-28 and 2025-07-28
         self.static_ip: bool                = True if random.randint(0, 100) < 30 else False
         self.use_dynamic_urls: bool         = True if random.randint(0, 100) < 50 else False
-        self.use_round_robin: str           = 'NONE' if random.randint(0, 100) < 35 else '1' if random.randint(0, 100) < 40 else ['RANDOM', '5', '10', '50', '100'][random.randint(0, 4)]  # no rr in 35% of cases, rr after every request in 26% of cases
-        self.round_robin_domains: str       = ','.join([''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(8, 20))) + ['.com', '.cn', '.edu', '.io', '.nl'][random.randint(0, 4)] for i in range(random.randint(2, 10))])
+        self.round_robin_logic: str         = '1' if random.randint(0, 100) < 60 else ['RANDOM', '5', '10', '50', '100'][random.randint(0, 4)]
  
  
 for i in range(NUMBER_OF_HTTP_GET_SIMULATIONS_TO_RUN + NUMBER_OF_SOCKS_SIMULATIONS_TO_RUN):
@@ -75,5 +78,5 @@ for i in range(NUMBER_OF_HTTP_GET_SIMULATIONS_TO_RUN + NUMBER_OF_SOCKS_SIMULATIO
         beacon.event_logger.removeHandler(handler)
  
     # move written log files to the new logging folder with good naming
-    os.replace('beaconing_simulation_events.log', f'beaconing_simulation_logs/run{i}_{args.interval}s_{args.max_requests}reqs_{args.protocol}_rr-{args.use_round_robin}_events.log')
-    os.replace('beaconing_simulation_messages.log', f'beaconing_simulation_logs/run{i}_{args.interval}s_{args.max_requests}reqs_{args.protocol}_rr-{args.use_round_robin}_messages.log')
+    os.replace('beaconing_simulation_events.log', f'beaconing_simulation_logs/run{i}_{args.interval}s_{args.max_requests}reqs_{args.protocol}_rr-{args.round_robin_logic}_events.log')
+    os.replace('beaconing_simulation_messages.log', f'beaconing_simulation_logs/run{i}_{args.interval}s_{args.max_requests}reqs_{args.protocol}_rr-{args.round_robin_logic}_messages.log')
