@@ -81,7 +81,7 @@ class SocksBeacon(Beacon):
         """
         one iteration of the simulation where events are only logged, no actual request is dispatched
         """
-        exfil_size = random.randint(1000000, 10000000)
+        exfil_size = random.randint(5000000, 50000000) if self.discovery_phase is True else random.randint(1000000, 5000000)  # assume a command which returns a lot of output during first c2 usage (e.g. an operator doing enumeration vs. just execution later on)
         chunks     = int(exfil_size/511999) if int(exfil_size/511999) > 0 else 1
 
         for i in range(chunks):
@@ -105,8 +105,8 @@ class SocksBeacon(Beacon):
         one iteration of the simulation where events are only logged, no actual request is dispatched
         seems equivalent to c2 traffic in case of socks usage
         """
-        exfil_size = random.randint(1000000, 10000000)
-        chunks     = int(exfil_size/511999) if int(exfil_size/511999) > 0 else 1
+        exfil_size = random.randint(20000000, 50000000)
+        chunks     = int(exfil_size/511999)
 
         for i in range(chunks):
             if random.randint(1, 2) == 1:
@@ -169,6 +169,9 @@ class SocksBeacon(Beacon):
                     pass  # TODO requires a server-side
                 except Exception:
                     pass
+
+            if self.discovery_phase is True:
+                break  # only simulate 1 command during first c2 usage
 
 
     def exfil_iteration(self):

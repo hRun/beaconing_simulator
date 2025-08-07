@@ -46,6 +46,7 @@ def simulate_beaconing(beacon):
                 beacon.message_logger.info(f'rolled to simulate command transfer and execution on request #{i}.')
 
                 beacon.c2_iteration()
+                beacon.discovery_phase = False  # assume a discovery phase for the first c2 usage where output will be larger than during subsequent usage
 
                 # temporarily increase beaconing interval to simulate the attacker needing less beacons while working on the received data
                 if beacon.args.reduce_interval_after_c2:

@@ -81,7 +81,7 @@ class HttpBeacon(Beacon):
         """
         one iteration of the simulation where events are only logged, no actual request is dispatched
         """
-        exfil_size = random.randint(5000, 30000)
+        exfil_size = random.randint(500000, 2000000) if self.discovery_phase is True else random.randint(5000, 30000)  # assume a command which returns a lot of output during first c2 usage (e.g. an operator doing enumeration vs. just execution later on)
 
         self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.default_response_size + random.randint(600, 500000))  # receiving command (eventually including tooling)
         self.fake_timestamp += timedelta(milliseconds=random.randint(100, 400))
@@ -110,7 +110,7 @@ class HttpBeacon(Beacon):
         one iteration of the simulation where events are only logged, no actual request is dispatched
         """
         exfil_duration = random.randint(30, 600)
-        exfil_size     = random.randint(100000, 1000000) if self.args.request_method == 'GET' else random.randint(1000000, 10000000)
+        exfil_size     = random.randint(500000, 2000000) if self.args.request_method == 'GET' else random.randint(10000000, 50000000)
 
         self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.default_response_size + random.randint(600, 500000))  # receiving exfil command (eventually including tooling)
         self.fake_timestamp += timedelta(milliseconds=random.randint(100, 400))
@@ -172,6 +172,9 @@ class HttpBeacon(Beacon):
                     pass  # TODO requires a server-side
                 except Exception:
                     pass
+
+            if self.discovery_phase is True:
+                break  # only simulate 1 command during first c2 usage
 
 
     def exfil_iteration(self):
