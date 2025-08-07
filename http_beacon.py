@@ -21,8 +21,8 @@ class HttpBeacon(Beacon):
 
     def __init__(self, args):
         super().__init__(args)
-        self.default_response_size = random.randint(200, 2000000)  # default response size heavily depends on the maleable profile (e.g. whether it's configured to return a legitimate-looking web page, etc. or not)
-        self.default_request_size  = random.randint(150, 4000)
+        self.default_response_size = random.randint(200, 20000)  # default response size heavily depends on the maleable profile (e.g. whether it's configured to return a legitimate-looking web page, etc. or not)
+        self.default_request_size  = random.randint(150, 8191)
 
 
     def clean_up(self, **kwargs):
@@ -81,26 +81,26 @@ class HttpBeacon(Beacon):
         """
         one iteration of the simulation where events are only logged, no actual request is dispatched
         """
-        self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.default_response_size + random.randint(400, 15000))  # receiving command
+        exfil_size = random.randint(5000, 30000)
+
+        self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.default_response_size + random.randint(3000, 10000))  # receiving command
+        self.fake_timestamp += timedelta(milliseconds=random.randint(100, 400))
 
         # optional: send faster beacons for a while indicating to the operator that the command is running
         # for i in range(random.randint(10, 120)):  # 2-120 seconds command runtime with the defined fake sleep
         #     self.write_log_event(self.command_uri, self.jitter_data(self.default_request_size), self.jitter_data(self.default_response_size))
         #     self.fake_timestamp += timedelta(milliseconds=random.randint(200, 1000))
 
-        # command done, return execution results
-        exfil_size = random.randint(5000, 15000000)
-
-        if self.args.exfil_chunking != 'NONE' and exfil_size > 460800:
-            for i in range(int(exfil_size/460800)):  # static 460kb chunks
-                if self.args.exfil_chunking == 'URI':
-                    self.write_log_event(''.join(random.choices(string.ascii_letters + string.digits, k=16)), 460800, self.jitter_data(self.default_response_size))
+        if self.chunk_size > 0 and exfil_size > self.chunk_size:
+            for i in range(int(exfil_size/self.chunk_size)):
+                if self.args.request_method == 'GET':
+                    self.write_log_event(f'{self.command_uri}&__payload={''.join(random.choices(string.ascii_letters + string.digits, k=16))}', self.chunk_size, self.jitter_data(self.default_response_size))  # during a real beacon the uri would have a length close to the request size
                 else:
-                    self.write_log_event(self.command_uri, 460800, self.jitter_data(self.default_response_size))
-                self.fake_timestamp += timedelta(seconds=1)  # 1s/460kb
+                    self.write_log_event(self.command_uri, self.chunk_size, self.jitter_data(self.default_response_size))
+                self.fake_timestamp += timedelta(seconds=1)  # 1s/chunk
         else:
             self.write_log_event(self.command_uri, exfil_size, self.jitter_data(550))
-            self.fake_timestamp += timedelta(seconds=exfil_size/460800)  # 1s/460kb
+            self.fake_timestamp += timedelta(seconds=exfil_size/512000)  # 1s/512kb
 
         self.fake_timestamp += timedelta(seconds=random.randint(20, 300))  # operator is working on results and sending the next command
 
@@ -110,21 +110,21 @@ class HttpBeacon(Beacon):
         one iteration of the simulation where events are only logged, no actual request is dispatched
         """
         exfil_duration = random.randint(30, 600)
-        exfil_size     = random.randint(1000000, 100000000)
+        exfil_size     = random.randint(100000, 1000000) if self.args.request_method == 'GET' else random.randint(1000000, 10000000)
 
-        self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.default_response_size + random.randint(400, 15000))  # receiving exfil command
+        self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.default_response_size + random.randint(3000, 10000))  # receiving exfil command
         self.fake_timestamp += timedelta(milliseconds=random.randint(100, 400))
 
-        if self.args.exfil_chunking != 'NONE':
-            for i in range(int(exfil_size/460800)):  # static 460kb chunks
-                if self.args.exfil_chunking == 'URI':
-                    self.write_log_event(''.join(random.choices(string.ascii_letters + string.digits, k=16)), 460800, self.jitter_data(self.default_response_size))
+        if self.chunk_size > 0 and exfil_size > self.chunk_size:
+            for i in range(int(exfil_size/self.chunk_size)):
+                if self.args.request_method == 'GET':
+                    self.write_log_event(f'{self.exfil_uri}&__payload={''.join(random.choices(string.ascii_letters + string.digits, k=16))}', self.chunk_size, self.jitter_data(self.default_response_size))  # during a real beacon the uri would have a length close to the request size
                 else:
-                    self.write_log_event(self.exfil_uri, 460800, self.jitter_data(self.default_response_size))
-                self.fake_timestamp += timedelta(seconds=1)  # 1s/460kb
+                    self.write_log_event(self.exfil_uri, self.chunk_size, self.jitter_data(self.default_response_size))
+                self.fake_timestamp += timedelta(seconds=1)  # 1s/chunk
         else:
             self.write_log_event(self.exfil_uri, exfil_size, self.jitter_data(550))
-            self.fake_timestamp += timedelta(seconds=exfil_size/460800)  # 1s/460kb
+            self.fake_timestamp += timedelta(seconds=exfil_size/512000)  # 1s/512kb
 
 
     def normal_iteration_log_only(self):
@@ -161,10 +161,9 @@ class HttpBeacon(Beacon):
         one beaconing iteration of the simulation with active c2 communication
         one iteration consists of multiple requests immitating how commands and results go back and forth for a while
         """
-        for i in range(random.randint(1, 5)):  # up to X commands at once
+        for i in range(random.randint(1, 4)):  # up to X commands at once
             if self.args.use_dynamic_urls:
-                self.command_uri = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
-                self.exfil_uri   = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
+                self.command_uri = f'{''.join(random.choices(string.ascii_letters + string.digits, k=16))}?__c2'
 
             if self.args.log_only:
                 self.c2_iteration_log_only()
@@ -180,7 +179,7 @@ class HttpBeacon(Beacon):
         one beaconing iteration of the simulation with data exfiltration
         """
         if self.args.use_dynamic_urls:
-            self.exfil_uri = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
+            self.exfil_uri = f'{''.join(random.choices(string.ascii_letters + string.digits, k=16))}?__exfil'
 
         if self.args.log_only:
             self.exfil_iteration_log_only()
@@ -196,7 +195,7 @@ class HttpBeacon(Beacon):
         one normal beaconing iteration of the simulation
         """
         if self.args.use_dynamic_urls:
-            self.beaconing_uri = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
+            self.beaconing_uri = f'{''.join(random.choices(string.ascii_letters + string.digits, k=16))}?__ping'
 
         if self.args.log_only:
             self.normal_iteration_log_only()

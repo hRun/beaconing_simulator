@@ -21,8 +21,8 @@ class SocksBeacon(Beacon):
 
     def __init__(self, args):
         super().__init__(args)
-        self.default_response_size = random.randint(200, 2000000)  # default response size heavily depends on the maleable profile (e.g. whether it's configured to return a legitimate-looking web page, etc. or not)
-        self.default_request_size  = random.randint(400, 7500)
+        self.default_response_size = random.randint(200, 20000)  # default response size heavily depends on the maleable profile (e.g. whether it's configured to return a legitimate-looking web page, etc. or not)
+        self.default_request_size  = random.randint(400, 8191)
 
 
     def clean_up(self, **kwargs):
@@ -81,15 +81,14 @@ class SocksBeacon(Beacon):
         """
         one iteration of the simulation where events are only logged, no actual request is dispatched
         """
-        # roll command result size & chunk number
-        exfil_size = random.randint(5000, 15000000)
-        chunks     = int(exfil_size/460800) if int(exfil_size/460800) > 0 else random.randint(3, 10)
+        exfil_size = random.randint(1000000, 10000000)
+        chunks     = int(exfil_size/511999) if int(exfil_size/511999) > 0 else 1
 
         for i in range(chunks):
             if random.randint(1, 2) == 1:
                 self.write_log_event(self.beaconing_uri, self.default_request_size, self.jitter_data(self.default_response_size), 'GET')  # continuation of "empty" requests
 
-            self.write_log_event(f'{self.command_uri}?{''.join(random.choices(string.ascii_letters + string.digits, k=6))}={''.join(random.choices(string.ascii_letters + string.digits, k=24))}', exfil_size/chunks, self.jitter_data(self.default_response_size), 'POST')
+            self.write_log_event(f'{self.command_uri}&__payload={''.join(random.choices(string.ascii_letters + string.digits, k=24))}', exfil_size/chunks, self.jitter_data(self.default_response_size), 'POST')
             self.write_log_event(self.command_uri, self.jitter_data(self.default_request_size*random.randint(5, 10)), self.jitter_data(self.default_response_size), 'GET')
 
             if random.randint(1, 2) == 1:
@@ -106,8 +105,23 @@ class SocksBeacon(Beacon):
         one iteration of the simulation where events are only logged, no actual request is dispatched
         seems equivalent to c2 traffic in case of socks usage
         """
-        self.command_uri = self.exfil_uri
-        self.c2_iteration_log_only()
+        exfil_size = random.randint(1000000, 10000000)
+        chunks     = int(exfil_size/511999) if int(exfil_size/511999) > 0 else 1
+
+        for i in range(chunks):
+            if random.randint(1, 2) == 1:
+                self.write_log_event(self.beaconing_uri, self.default_request_size, self.jitter_data(self.default_response_size), 'GET')  # continuation of "empty" requests
+
+            self.write_log_event(f'{self.exfil_uri}&__payload={''.join(random.choices(string.ascii_letters + string.digits, k=24))}', exfil_size/chunks, self.jitter_data(self.default_response_size), 'POST')
+            self.write_log_event(self.exfil_uri, self.jitter_data(self.default_request_size*random.randint(5, 10)), self.jitter_data(self.default_response_size), 'GET')
+
+            if random.randint(1, 2) == 1:
+                self.write_log_event(self.beaconing_uri, self.default_request_size, self.jitter_data(self.default_response_size), 'GET')  # continuation of "empty" requests
+            self.write_log_event(self.beaconing_uri, self.default_request_size, self.jitter_data(self.default_response_size), 'GET')  # continuation of "empty" requests
+
+            self.fake_timestamp += timedelta(milliseconds=random.randint(25, 100))  # seems like appropriate values. can be changed though
+
+        self.fake_timestamp += timedelta(milliseconds=random.randint(100, 400))  # seems like appropriate values. can be changed though
 
 
     def normal_iteration_log_only(self):
@@ -144,10 +158,9 @@ class SocksBeacon(Beacon):
         one beaconing iteration of the simulation with active c2 communication
         one iteration consists of multiple requests immitating how commands and results go back and forth for a while
         """
-        for i in range(random.randint(1, 5)):  # up to X commands at once
+        for i in range(random.randint(1, 4)):  # up to X commands at once
             if self.args.use_dynamic_urls:
-                self.command_uri = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
-                self.exfil_uri   = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
+                self.command_uri = f'{''.join(random.choices(string.ascii_letters + string.digits, k=16))}?__c2'
 
             if self.args.log_only:
                 self.c2_iteration_log_only()
@@ -163,7 +176,7 @@ class SocksBeacon(Beacon):
         one beaconing iteration of the simulation with data exfiltration
         """
         if self.args.use_dynamic_urls:
-            self.exfil_uri = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
+            self.exfil_uri = f'{''.join(random.choices(string.ascii_letters + string.digits, k=16))}?__exfil'
 
         if self.args.log_only:
             self.exfil_iteration_log_only()
@@ -179,7 +192,7 @@ class SocksBeacon(Beacon):
         one normal beaconing iteration of the simulation
         """
         if self.args.use_dynamic_urls:
-            self.beaconing_uri = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
+            self.beaconing_uri = f'{''.join(random.choices(string.ascii_letters + string.digits, k=16))}?__ping'
 
         if self.args.log_only:
             self.normal_iteration_log_only()

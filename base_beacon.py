@@ -43,6 +43,7 @@ class Beacon():
         self.event_logger.addHandler(eh)
 
 
+        path_prefix                     = ['awesoms-real-font-4real.woff', 'jquery-0.0.0.js', 'index.html', 'index.php', '16x1024banner.png'][random.randint(0, 4)]
         self.ABSENCE_START: int         = 0
         self.COMMAND_RATIO: float       = 0.0
         self.EXFIL_START: int           = 0
@@ -57,11 +58,12 @@ class Beacon():
 
         self.absent: bool               = False
         self.args                       = args
-        self.beaconing_uri: str         = 'ping'
-        self.command_uri: str           = 'command'
+        self.beaconing_uri: str         = f'{path_prefix}?__ping'
+        self.chunk_size: int            = 0 if self.args.no_chunking is True else 511999 if self.args.protocol in ['HTTP', 'HTTPS'] and self.args.protocol == 'POST' else 8191
+        self.command_uri: str           = f'{path_prefix}?__c2'
         self.destinations: list         = []  # {'domain': '', 'ips': [], 'primary': ''}
         self.done: bool                 = False
-        self.exfil_uri: str             = 'exfil'
+        self.exfil_uri: str             = f'{path_prefix}?__exfil'
         self.fake_timestamp: datetime   = datetime.now(timezone.utc) if self.args.start_time == 0 else datetime.fromtimestamp(self.args.start_time) # format is strftime('%m/%d/%Y %H:%M:%S.%.3f %p')
         self.last_destination: int      = 0
         self.reduction_count: int       = 0
@@ -131,7 +133,7 @@ class Beacon():
 
         if not args.no_exfil:
             self.EXFIL_START = random.randint(int(self.args.max_requests*0.8)+1, self.args.max_requests)  # start exfiltration simulation after x requests. always after absence
-            self.message_logger.info(f'data exfiltration will be simulated after {self.EXFIL_START} requests. {"data chunking will be used for exfiltration." if self.args.exfil_chunking != "NONE" else ""}')
+            self.message_logger.info(f'data exfiltration will be simulated after {self.EXFIL_START} requests. {"no data chunking will be used for exfiltration." if self.args.no_chunking is True else ""}')
 
         if args.log_only:
             self.message_logger.info(f'simulation will run in log-only mode. no actual requests will be dispatched. this should be done in a few seconds')

@@ -33,10 +33,10 @@ class CustomArgObject():
         self.absence: int                   = 0 if random.randint(0, 100) < 70 else random.randint(4*60, 3*24*60)  # simulate 4h-3d absence in 30% of runs
         self.active_c2_ratio: float         = random.uniform(0.1, 3.0)
         self.data_jitter: int               = random.randint(11, 222)
-        self.exfil_chunking: bool           = ['NONE', 'HEADER', 'URI'][random.randint(0, 2)]
         self.jitter: int                    = random.randint(17, 83)
         self.log_only: bool                 = True
         self.no_c2: bool                    = True if random.randint(0, 100) < 15 else False  # don't simulate active c2 usage in only 15% of runs
+        self.no_chunking: bool              = False
         self.no_exfil: bool                 = True if random.randint(0, 100) < 30 else False  # don't simulate data exfiltration in only 30% of runs
         self.no_noise: bool                 = True  # background noise is not necessary for our purposes
         self.protocol: str                  = ['HTTP', 'HTTPS', 'SOCKS'][random.randint(0, 2)]
