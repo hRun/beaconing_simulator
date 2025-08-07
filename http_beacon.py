@@ -68,11 +68,11 @@ class HttpBeacon(Beacon):
             {fake_time_generated if self.args.log_only else ""} \
             "SourceUserName": "{self.USER}", \
             "DeviceName": "{self.HOSTNAME}", \
-            "DestinationHostName": "{self.destinations[self.last_destination]['domain']}", \
-            "DestinationIP": "{self.destinations[self.last_destination]['ips'][0] if self.args.static_ip else random.choice(self.destinations[self.last_destination]['ips'])}", \
+            "DestinationHostName": "{self.destinations[self.destination_index]['domain']}", \
+            "DestinationIP": "{self.destinations[self.destination_index]['ips'][0] if self.args.static_ip else random.choice(self.destinations[self.destination_index]['ips'])}", \
             "RequestMethod": "{self.args.request_method}", \
             "Protocol": "{self.args.protocol}", \
-            "RequestURL": "{self.args.protocol.lower()}://{self.destinations[self.last_destination]['primary']}/{uri}", \
+            "RequestURL": "{self.args.protocol.lower()}://{self.destinations[self.destination_index]['primary']}/{uri}", \
             "SentBytes": {int(sent_bytes)}, \
             "ReceivedBytes": {int(received_bytes)}'''.replace('    ', ''))
 
@@ -83,7 +83,7 @@ class HttpBeacon(Beacon):
         """
         exfil_size = random.randint(5000, 30000)
 
-        self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.default_response_size + random.randint(3000, 10000))  # receiving command
+        self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.default_response_size + random.randint(600, 50000))  # receiving command (eventually including tooling)
         self.fake_timestamp += timedelta(milliseconds=random.randint(100, 400))
 
         # optional: send faster beacons for a while indicating to the operator that the command is running
@@ -112,7 +112,7 @@ class HttpBeacon(Beacon):
         exfil_duration = random.randint(30, 600)
         exfil_size     = random.randint(100000, 1000000) if self.args.request_method == 'GET' else random.randint(1000000, 10000000)
 
-        self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.default_response_size + random.randint(3000, 10000))  # receiving exfil command
+        self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.default_response_size + random.randint(600, 50000))  # receiving exfil command (eventually including tooling)
         self.fake_timestamp += timedelta(milliseconds=random.randint(100, 400))
 
         if self.chunk_size > 0 and exfil_size > self.chunk_size:
@@ -204,7 +204,7 @@ class HttpBeacon(Beacon):
                 # TODO check response code?
                 if self.args.request_method == 'POST':
                     response = requests.post(
-                        f'{self.args.protocol.lower()}://{self.destinations[self.last_destination]['primary']}/{self.beaconing_uri}',
+                        f'{self.args.protocol.lower()}://{self.destinations[self.destination_index]['primary']}/{self.beaconing_uri}',
                         headers={
                             'user-agent': 'Beaconing Simulation Script for Threat Hunting and Attack Simulation',
                             'accept': '*/*',
@@ -217,7 +217,7 @@ class HttpBeacon(Beacon):
                     self.write_log_event(self.beaconing_uri, self.approximate_request_size(response.request), len(response.text))
                 elif self.args.request_method == 'PUT':
                     response = requests.put(
-                        f'{self.args.protocol.lower()}://{self.destinations[self.last_destination]['primary']}/{self.beaconing_uri}',
+                        f'{self.args.protocol.lower()}://{self.destinations[self.destination_index]['primary']}/{self.beaconing_uri}',
                         headers={
                             'user-agent': 'Beaconing Simulation Script for Threat Hunting and Attack Simulation',
                             'accept': '*/*',
@@ -230,7 +230,7 @@ class HttpBeacon(Beacon):
                 else:
                     # default to GET
                     response = requests.get(
-                        f'{self.args.protocol.lower()}://{self.destinations[self.last_destination]['primary']}/{self.beaconing_uri}',
+                        f'{self.args.protocol.lower()}://{self.destinations[self.destination_index]['primary']}/{self.beaconing_uri}',
                         headers={
                             'user-agent': 'Beaconing Simulation Script for Threat Hunting and Attack Simulation',
                             'accept': '*/*',

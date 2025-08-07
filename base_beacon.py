@@ -50,12 +50,7 @@ class Beacon():
         self.HOSTNAME: str              = socket.gethostname()
         self.USER: str                  = getlogin()  # TODO domain? upn?
         self.USER_ACTIVITY_IPS: dict    = {}
-        self.USER_ACTIVITY_DOMAINS:list = [
-            'amazon.com', 'cnn.com', 'github.com', 'google.com', 'instagram.com',
-            'justbean.co', 'office.com', 'reddit.com', 'reuters.com', 'theuselessweb.com', 
-            'tiktok.com', 'x.com', 'youtube.com', '9gag.com'
-        ]
-
+        self.USER_ACTIVITY_DOMAINS:list = ['amazon.com', 'cnn.com', 'github.com', 'google.com', 'instagram.com', 'justbean.co', 'office.com', 'reddit.com', 'reuters.com', 'theuselessweb.com', 'tiktok.com', 'x.com', 'youtube.com', '9gag.com']
         self.absent: bool               = False
         self.args                       = args
         self.beaconing_uri: str         = f'{path_prefix}?__ping'
@@ -65,7 +60,7 @@ class Beacon():
         self.done: bool                 = False
         self.exfil_uri: str             = f'{path_prefix}?__exfil'
         self.fake_timestamp: datetime   = datetime.now(timezone.utc) if self.args.start_time == 0 else datetime.fromtimestamp(self.args.start_time) # format is strftime('%m/%d/%Y %H:%M:%S.%.3f %p')
-        self.last_destination: int      = 0
+        self.destination_index: int      = 0
         self.reduction_count: int       = 0
         self.reduction_time:  int       = 0
 
@@ -77,12 +72,7 @@ class Beacon():
             except Exception:
                 self.USER_ACTIVITY_IPS[i] = 'N/A'
 
-        destination_buffer:list = [self.args.destination]
-
-        if self.args.use_round_robin != 'NONE':
-            destination_buffer += self.args.round_robin_domains.split(',')
-
-        for i in destination_buffer:
+        for i in self.args.destinations.split(','):
             destination_obj = {}
 
             if i.replace('.', '').isdigit():
@@ -114,7 +104,7 @@ class Beacon():
         if args.jitter < 0:
             self.args.jitter = 0
 
-        self.message_logger.info(f'will dispatch {self.args.max_requests} requests towards "{', '.join(destination_buffer)}" with an interval of {self.args.interval} seconds and {self.args.jitter}% jitter before ending the simulation.')
+        self.message_logger.info(f'will dispatch {self.args.max_requests} requests towards "{self.args.destinations}" with an interval of {self.args.interval} seconds and {self.args.jitter}% jitter before ending the simulation.')
         self.message_logger.info(f'{"" if not self.args.no_noise else "no"} background noise as users would generate it will be simulated.')
 
         if not args.no_c2:
@@ -156,13 +146,13 @@ class Beacon():
         """
         jump to the next domain when using round robin
         """
-        if self.args.use_round_robin != 'NONE':
-            if self.last_destination >= len(self.destinations)-1:
-                self.last_destination = 0
+        if len(self.destinations) > 1:
+            if self.destination_index >= len(self.destinations)-1:
+                self.destination_index = 0
             else:
-                self.last_destination += 1
+                self.destination_index += 1
         else:
-            self.last_destination = 0
+            self.destination_index = 0
 
 
     def resolve_destination(self):

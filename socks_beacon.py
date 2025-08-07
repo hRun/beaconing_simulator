@@ -68,11 +68,11 @@ class SocksBeacon(Beacon):
             {fake_time_generated if self.args.log_only else ""} \
             "SourceUserName": "{self.USER}", \
             "DeviceName": "{self.HOSTNAME}", \
-            "DestinationHostName": "{self.destinations[self.last_destination]['domain']}", \
-            "DestinationIP": "{self.destinations[self.last_destination]['ips'][0] if self.args.static_ip else random.choice(self.destinations[self.last_destination]['ips'])}", \
+            "DestinationHostName": "{self.destinations[self.destination_index]['domain']}", \
+            "DestinationIP": "{self.destinations[self.destination_index]['ips'][0] if self.args.static_ip else random.choice(self.destinations[self.destination_index]['ips'])}", \
             "RequestMethod": "{request_method}", \
             "Protocol": "HTTP", \
-            "RequestURL": "http://{self.destinations[self.last_destination]['primary']}/{uri}", \
+            "RequestURL": "http://{self.destinations[self.destination_index]['primary']}/{uri}", \
             "SentBytes": {int(sent_bytes)}, \
             "ReceivedBytes": {int(received_bytes)}'''.replace('    ', ''))
 
