@@ -45,6 +45,7 @@ class CustomArgObject():
         self.no_noise: bool                 = True  # background noise is not necessary for our purposes
         self.protocol: str                  = ['HTTP', 'HTTPS', 'SOCKS'][random.randint(0, 2)]
         self.reduce_interval_after_c2: bool = True if random.randint(0, 100) < 30 else False  # simulate interval reduction after active c2 usage in 30% of runs
+        self.response_size: str             = ['NORMAL', 'LARGE'][random.randint(0, 1)] if random.randint(0, 100) < 90 else 'RANDOM'  # rarely use random response sizes as they are unlikely to be used in the real world
         self.request_method: str            = 'GET' if random.randint(0, 100) < 80 else ['POST', 'PUT'][random.randint(0,1)]  # mostly simulate HTTP GET beacons if HTTP was selected
         self.start_time: int                = 1753707644 - random.randint(0, 31536000)  # between 2024-07-28 and 2025-07-28
         self.static_ip: bool                = True if random.randint(0, 100) < 30 else False

@@ -19,8 +19,8 @@ a python script to simulate malware beaconing in a slightly more sophistocated w
 
 ```
 usage: beaconing_simulation.py [-h] [--absence ABSENCE] [--active_c2_ratio ACTIVE_C2_RATIO] [--data_jitter DATA_JITTER] [--jitter JITTER] [--log_only] [--no_c2] [--no_chunking] [--no_exfil] [--no_noise]
-                               [--protocol {HTTP,HTTPS,SOCKS,WEBSOCKET}] [--reduce_interval_after_c2] [--request_method {GET,POST,PUT}] [--start_time START_TIME] [--static_ip] [--use_dynamic_urls]
-                               [--round_robin_logic {RANDOM,1,5,10,50,100}]
+                               [--protocol {HTTP,HTTPS,SOCKS,WEBSOCKET}] [--reduce_interval_after_c2] [--response_size {NORMAL,LARGE,RANDOM}] [--request_method {GET,POST,PUT}]
+                               [--round_robin_logic {RANDOM,1,5,10,50,100}] [--start_time START_TIME] [--static_ip] [--use_dynamic_urls]
                                destinations interval max_requests
 
 positional arguments:
@@ -34,7 +34,7 @@ options:
   --active_c2_ratio ACTIVE_C2_RATIO
                         the percentage of requests which should simulate active usage of the c2 channel. i.e. command and result exchange. default is between 0.1 and 3 percent
   --data_jitter DATA_JITTER
-                        if log_only is set, add random jitter to the request and response sizes (in percent). default is 11 percent
+                        add random jitter to the request size (also to response sizes if log_only is set) in percent. default is 11 percent
   --jitter JITTER       add random jitter to the time intervals between the beaconing requests (in percent of intervals). default is 17 percent
   --log_only            only write log events as they would be expected from the simulation, don't actually dispatch requests. default is to make real requests
   --no_c2               don't simulate the beacon receiving instructions from the c2 server (i.e. some larger responses, followed by larger requests, followed by temporary slower beaconing). default is to
@@ -46,14 +46,17 @@ options:
                         network protocol to use for beaconing communication. default is http
   --reduce_interval_after_c2
                         reduce the polling interval after an active session, simulating how higher stealth could be achieved while the operator works on obtained data
+  --response_size {NORMAL,LARGE,RANDOM}
+                        if log_only is set, set the http response size range to use. this is to mimic different malleable profile configurations (e.g. a profile which returns a legitimate-looking web page vs.
+                        one that returns the bare minimum)
   --request_method {GET,POST,PUT}
                         if using http, the request method to use for beaconing. default is get
+  --round_robin_logic {RANDOM,1,5,10,50,100}
+                        set the logic to iterate destinations when multiple were provided. switch domains after every x requests or randomly
   --start_time START_TIME
                         if log_only is set, set the start time of the fake simulation (epoch time stamp expected). otherwise the simulation will start at the current time and end in the future
   --static_ip           a domain might resolve to multiple ips (e.g. when a cdn is used). set this argument to statically log the first observed ip. default is to log a random ip from the set
   --use_dynamic_urls    if using http, use a new randomly generated uri path on each request. default is false
-  --round_robin_logic {RANDOM,1,5,10,50,100}
-                        set the logic to iterate destinations when multiple were provided. switch domains after every x requests or randomly
 ```
 
 

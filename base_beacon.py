@@ -105,6 +105,9 @@ class Beacon():
         if args.jitter < 0:
             self.args.jitter = 0
 
+        if args.data_jitter < 0:
+            self.args.data_jitter = 0
+
         self.message_logger.info(f'will dispatch {self.args.max_requests} requests towards "{self.args.destinations}" with an interval of {self.args.interval} seconds and {self.args.jitter}% jitter before ending the simulation.')
         self.message_logger.info(f'{"" if not self.args.no_noise else "no"} background noise as users would generate it will be simulated.')
 

@@ -21,8 +21,14 @@ class SocksBeacon(Beacon):
 
     def __init__(self, args):
         super().__init__(args)
-        self.default_response_size = random.randint(200, 20000)  # default response size heavily depends on the maleable profile (e.g. whether it's configured to return a legitimate-looking web page, etc. or not)
         self.default_request_size  = random.randint(400, 8191)
+
+        if self.args.response_size == 'LARGE':
+            self.default_response_size = random.randint(20000, 200000)  # maleable profile which e.g. returna a legitimate-looking web page
+        elif self.args.response_size == 'RANDOM':
+            self.default_response_size = random.randint(200, 100000)  # maleable profile which returns random data in addition to the beacon data
+        else:
+            self.default_response_size = random.randint(700, 4000)  # maleable profile which returns th bare minimum data
 
 
     def clean_up(self, **kwargs):

@@ -133,7 +133,7 @@ if __name__ == "__main__":
     parser.add_argument("max_requests", help="end the simulation after X requests. default is 720 requests, equating to ~6 hours with a 30 second interval", type=int, default=720)
     parser.add_argument("--absence", help="make a significant pause of X minutes during the test to simulate the device being offline/sleeping/... default is no absence", type=int, default=0)
     parser.add_argument("--active_c2_ratio", help="the percentage of requests which should simulate active usage of the c2 channel. i.e. command and result exchange. default is between 0.1 and 3 percent", type=float, default=0.0)
-    parser.add_argument("--data_jitter", help="if log_only is set, add random jitter to the request and response sizes (in percent). default is 11 percent", type=int, default=11)
+    parser.add_argument("--data_jitter", help="add random jitter to the request size (also to response sizes if log_only is set) in percent. default is 11 percent", type=int, default=11)
     parser.add_argument("--jitter", help="add random jitter to the time intervals between the beaconing requests (in percent of intervals). default is 17 percent", type=int, default=17)
     parser.add_argument("--log_only", help="only write log events as they would be expected from the simulation, don't actually dispatch requests. default is to make real requests", action="store_true", default=False)
     parser.add_argument("--no_c2", help="don't simulate the beacon receiving instructions from the c2 server (i.e. some larger responses, followed by larger requests, followed by temporary slower beaconing). default is to simulate c2 activity", action="store_true", default=False)
@@ -142,11 +142,12 @@ if __name__ == "__main__":
     parser.add_argument("--no_noise", help="don't make semi-random, semi-realistic non-beaconing requests in the background to add noise (as user activity would). default is to make background noise", action="store_true", default=False)
     parser.add_argument("--protocol", help="network protocol to use for beaconing communication. default is http", type=str, choices=['HTTP', 'HTTPS', 'SOCKS', 'WEBSOCKET'], default='HTTP')  # TODO choices=['DNS', 'TCP', 'UDP', '...']
     parser.add_argument("--reduce_interval_after_c2", help="reduce the polling interval after an active session, simulating how higher stealth could be achieved while the operator works on obtained data", action="store_true", default=False)
+    parser.add_argument("--response_size", help="if log_only is set, set the http response size range to use. this is to mimic different malleable profile configurations (e.g. a profile which returns a legitimate-looking web page vs. one that returns the bare minimum)", type=str, choices=['NORMAL', 'LARGE', 'RANDOM'], default='NORMAL')
     parser.add_argument("--request_method", help="if using http, the request method to use for beaconing. default is get", type=str, choices=['GET', 'POST', 'PUT'], default='GET')  # TODO HEAD?
+    parser.add_argument("--round_robin_logic", help="set the logic to iterate destinations when multiple were provided. switch domains after every x requests or randomly", type=str, choices=['RANDOM', '1', '5', '10', '50', '100'], default='1')
     parser.add_argument("--start_time", help="if log_only is set, set the start time of the fake simulation (epoch time stamp expected). otherwise the simulation will start at the current time and end in the future", type=int, default=0)
     parser.add_argument("--static_ip", help="a domain might resolve to multiple ips (e.g. when a cdn is used). set this argument to statically log the first observed ip. default is to log a random ip from the set", action="store_true", default=False)
     parser.add_argument("--use_dynamic_urls", help="if using http, use a new randomly generated uri path on each request. default is false", action="store_true", default=False)
-    parser.add_argument("--round_robin_logic", help="set the logic to iterate destinations when multiple were provided. switch domains after every x requests or randomly", type=str, choices=['RANDOM', '1', '5', '10', '50', '100'], default='1')
     args   = parser.parse_args()
     beacon = None
 
