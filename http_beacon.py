@@ -67,7 +67,7 @@ class HttpBeacon(Beacon):
         return size
 
 
-    def write_log_event(self, uri: str, sent_bytes: int, received_bytes: int):
+    def write_log_event(self, uri: str, sent_bytes: int, received_bytes: int, request_method: str = ''):
         fake_time_generated = f'"TimeGenerated": "{self.fake_timestamp}", '
 
         self.event_logger.info(f'''\
@@ -76,7 +76,7 @@ class HttpBeacon(Beacon):
             "DeviceName": "{self.HOSTNAME}", \
             "DestinationHostName": "{self.destinations[self.destination_index]['domain']}", \
             "DestinationIP": "{self.destinations[self.destination_index]['ips'][0] if self.args.static_ip else random.choice(self.destinations[self.destination_index]['ips'])}", \
-            "RequestMethod": "{self.args.request_method}", \
+            "RequestMethod": "{request_method if request_method != '' else self.args.request_method}", \
             "Protocol": "{self.args.protocol}", \
             "RequestURL": "{self.args.protocol.lower()}://{self.destinations[self.destination_index]['primary']}/{uri}", \
             "SentBytes": {int(sent_bytes)}, \
@@ -89,7 +89,10 @@ class HttpBeacon(Beacon):
         """
         exfil_size = random.randint(500000, 2000000) if self.discovery_phase is True else random.randint(5000, 30000)  # assume a command which returns a lot of output during first c2 usage (e.g. an operator doing enumeration vs. just execution later on)
 
-        self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.default_response_size + random.randint(600, 500000))  # receiving command (eventually including tooling)
+        if self.args.request_method == 'MIXED':
+            self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.default_response_size + random.randint(600, 500000), 'GET')  # receiving command (eventually including tooling)
+        else:
+            self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.default_response_size + random.randint(600, 500000))  # receiving command (eventually including tooling)
         self.fake_timestamp += timedelta(milliseconds=random.randint(100, 400))
 
         # optional: send faster beacons for a while indicating to the operator that the command is running
@@ -101,6 +104,8 @@ class HttpBeacon(Beacon):
             for i in range(int(exfil_size/self.chunk_size)):
                 if self.args.request_method == 'GET':
                     self.write_log_event(f'{self.command_uri}&__payload={''.join(random.choices(string.ascii_letters + string.digits, k=16))}', self.chunk_size, self.jitter_data(self.default_response_size))  # during a real beacon the uri would have a length close to the request size
+                elif self.args.request_method == 'MIXED':
+                    self.write_log_event(self.command_uri, self.chunk_size, self.jitter_data(self.default_response_size), 'POST')
                 else:
                     self.write_log_event(self.command_uri, self.chunk_size, self.jitter_data(self.default_response_size))
                 self.fake_timestamp += timedelta(seconds=1)  # 1s/chunk
@@ -108,7 +113,7 @@ class HttpBeacon(Beacon):
             self.write_log_event(self.command_uri, exfil_size, self.jitter_data(550))
             self.fake_timestamp += timedelta(seconds=exfil_size/512000)  # 1s/512kb
 
-        self.fake_timestamp += timedelta(seconds=random.randint(20, 300))  # operator is working on results and sending the next command
+        self.fake_timestamp += timedelta(seconds=random.randint(20, 300))  # operator is working on results and sending the next command. TODO this should be removed, instead do a bunch of normal requests
 
 
     def exfil_iteration_log_only(self):
@@ -118,13 +123,18 @@ class HttpBeacon(Beacon):
         exfil_duration = random.randint(30, 600)
         exfil_size     = random.randint(500000, 2000000) if self.args.request_method == 'GET' else random.randint(10000000, 50000000)
 
-        self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.default_response_size + random.randint(600, 500000))  # receiving exfil command (eventually including tooling)
+        if self.args.request_method == 'MIXED':
+            self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.default_response_size + random.randint(600, 500000), 'GET')  # receiving exfil command (eventually including tooling)
+        else:
+            self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.default_response_size + random.randint(600, 500000))  # receiving exfil command (eventually including tooling)
         self.fake_timestamp += timedelta(milliseconds=random.randint(100, 400))
 
         if self.chunk_size > 0 and exfil_size > self.chunk_size:
             for i in range(int(exfil_size/self.chunk_size)):
                 if self.args.request_method == 'GET':
                     self.write_log_event(f'{self.exfil_uri}&__payload={''.join(random.choices(string.ascii_letters + string.digits, k=16))}', self.chunk_size, self.jitter_data(self.default_response_size))  # during a real beacon the uri would have a length close to the request size
+                elif self.args.request_method == 'MIXED':
+                    self.write_log_event(self.exfil_uri, self.chunk_size, self.jitter_data(self.default_response_size), 'POST')
                 else:
                     self.write_log_event(self.exfil_uri, self.chunk_size, self.jitter_data(self.default_response_size))
                 self.fake_timestamp += timedelta(seconds=1)  # 1s/chunk
@@ -137,7 +147,10 @@ class HttpBeacon(Beacon):
         """
         one iteration of the simulation where events are only logged, no actual request is dispatched
         """
-        self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.jitter_data(self.default_response_size))
+        if self.args.request_method == 'MIXED':
+            self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.jitter_data(self.default_response_size), 'GET')
+        else:
+            self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.jitter_data(self.default_response_size))
         self.fake_timestamp += timedelta(milliseconds=random.randint(100, 400))  # seems like appropriate values. can be changed though
 
 

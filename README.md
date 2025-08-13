@@ -19,7 +19,7 @@ a python script to simulate malware beaconing in a slightly more sophistocated w
 
 ```
 usage: beaconing_simulation.py [-h] [--absence ABSENCE] [--active_c2_ratio ACTIVE_C2_RATIO] [--data_jitter DATA_JITTER] [--jitter JITTER] [--log_only] [--no_c2] [--no_chunking] [--no_exfil] [--no_noise]
-                               [--protocol {HTTP,HTTPS,SOCKS,WEBSOCKET}] [--reduce_interval_after_c2] [--response_size {NORMAL,LARGE,RANDOM}] [--request_method {GET,POST,PUT}]
+                               [--protocol {HTTP,HTTPS,SOCKS,WEBSOCKET}] [--reduce_interval_after_c2] [--response_size {NORMAL,LARGE,RANDOM}] [--request_method {GET,POST,PUT,MIXED}]
                                [--round_robin_logic {RANDOM,1,5,10,50,100}] [--start_time START_TIME] [--static_ip] [--use_dynamic_urls]
                                destinations interval max_requests
 
@@ -49,8 +49,8 @@ options:
   --response_size {NORMAL,LARGE,RANDOM}
                         if log_only is set, set the http response size range to use. this is to mimic different malleable profile configurations (e.g. a profile which returns a legitimate-looking web page vs.
                         one that returns the bare minimum)
-  --request_method {GET,POST,PUT}
-                        if using http, the request method to use for beaconing. default is get
+  --request_method {GET,POST,PUT,MIXED}
+                        if using http, the request method to use for beaconing. mix will use get for requests, post for responses. default is get
   --round_robin_logic {RANDOM,1,5,10,50,100}
                         set the logic to iterate destinations when multiple were provided. switch domains after every x requests or randomly
   --start_time START_TIME
