@@ -110,7 +110,10 @@ class HttpBeacon(Beacon):
                     self.write_log_event(self.command_uri, self.chunk_size, self.jitter_data(self.default_response_size))
                 self.fake_timestamp += timedelta(seconds=1)  # 1s/chunk
         else:
-            self.write_log_event(self.command_uri, exfil_size, self.jitter_data(550))
+            if self.args.request_method == 'MIXED':
+                self.write_log_event(self.command_uri, exfil_size, self.jitter_data(550), 'POST')
+            else:
+                self.write_log_event(self.command_uri, exfil_size, self.jitter_data(550))
             self.fake_timestamp += timedelta(seconds=exfil_size/512000)  # 1s/512kb
 
         self.fake_timestamp += timedelta(seconds=random.randint(20, 300))  # operator is working on results and sending the next command. TODO this should be removed, instead do a bunch of normal requests
@@ -139,7 +142,10 @@ class HttpBeacon(Beacon):
                     self.write_log_event(self.exfil_uri, self.chunk_size, self.jitter_data(self.default_response_size))
                 self.fake_timestamp += timedelta(seconds=1)  # 1s/chunk
         else:
-            self.write_log_event(self.exfil_uri, exfil_size, self.jitter_data(550))
+            if self.args.request_method == 'MIXED':
+                self.write_log_event(self.exfil_uri, exfil_size, self.jitter_data(550), 'POST')
+            else:
+                self.write_log_event(self.exfil_uri, exfil_size, self.jitter_data(550))
             self.fake_timestamp += timedelta(seconds=exfil_size/512000)  # 1s/512kb
 
 
