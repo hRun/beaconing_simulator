@@ -33,6 +33,8 @@ options:
   --absence ABSENCE     make a significant pause of X minutes during the test to simulate the device being offline/sleeping/... default is no absence
   --active_c2_ratio ACTIVE_C2_RATIO
                         the percentage of requests which should simulate active usage of the c2 channel. i.e. command and result exchange. default is between 0.1 and 3 percent
+  --cap_data_jitter CAP_DATA_JITTER
+                        add upper an lower limits to the amount of data jitter (in bytes) than will be applied. syntax: lower_limit,upper_limit (e.g. 1000,1500). default is no limits
   --data_jitter DATA_JITTER
                         add random jitter to the request size (also to response sizes if log_only is set) in percent. default is 11 percent
   --jitter JITTER       add random jitter to the time intervals between the beaconing requests (in percent of intervals). default is 17 percent

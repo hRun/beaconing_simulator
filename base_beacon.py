@@ -1,6 +1,7 @@
 import abc
 import logging
 import random
+import re
 import socket
 import string
 import time
@@ -108,6 +109,10 @@ class Beacon():
         if args.data_jitter < 0:
             self.args.data_jitter = 0
 
+        if self.args.cap_data_jitter not in [None, '']:
+            if not re.match(r"^\d+\,\d+$", self.args.cap_data_jitter):
+                self.args.cap_data_jitter = None
+
         self.message_logger.info(f'will dispatch {self.args.max_requests} requests towards "{self.args.destinations}" with an interval of {self.args.interval} seconds and {self.args.jitter}% jitter before ending the simulation.')
         self.message_logger.info(f'{"" if not self.args.no_noise else "no"} background noise as users would generate it will be simulated.')
 
@@ -130,7 +135,7 @@ class Beacon():
             self.message_logger.info(f'data exfiltration will be simulated after {self.EXFIL_START} requests. {"no data chunking will be used for exfiltration." if self.args.no_chunking is True else ""}')
 
         if args.log_only:
-            self.message_logger.info(f'simulation will run in log-only mode. no actual requests will be dispatched. this should be done in a few seconds')
+            self.message_logger.info(f'simulation will run in log-only mode. no actual requests will be dispatched. this should be done in a few seconds.')
         else:
             self.message_logger.info(f'simulation will run at least {round((self.args.interval/60)*self.args.max_requests + self.args.absence, 2)} minutes.')
             # TODO do a check whether the destination is reachable
@@ -141,9 +146,21 @@ class Beacon():
         add or substract a configurable percentage of jitter to provided data size and return the total
         """
         jitter = random.uniform(-1.0*(data_size/100)*self.args.data_jitter, 1.0*(data_size/100)*self.args.data_jitter)
-        jitter = random.uniform(0.8, 1.15)*data_size if data_size + jitter < 0 else jitter  # can't send negative data, set a reasonable value instead
+        
+        # can't send negative data, so re-roll if we happened to have rolled extreme values
+        while data_size + jitter < 0:
+            jitter = random.uniform(-1.0*(data_size/100)*self.args.data_jitter, 1.0*(data_size/100)*self.args.data_jitter)
+        # jitter = random.uniform(0.8, 1.15)*data_size if data_size + jitter < 0 else jitter  # can't send negative data, set a reasonable value instead
 
-        return int(data_size + jitter)
+        jittered_data = int(data_size + jitter)
+
+        if self.args.cap_data_jitter not in [None, '']:
+            if jittered_data < data_size - int(self.args.cap_data_jitter.split(',')[0]):
+                jittered_data = data_size - int(self.args.cap_data_jitter.split(',')[0])
+            elif jittered_data > data_size + int(self.args.cap_data_jitter.split(',')[1]):
+                jittered_data = data_size + int(self.args.cap_data_jitter.split(',')[1])
+
+        return jittered_data
 
 
     def next_destination(self):

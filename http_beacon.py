@@ -28,7 +28,9 @@ class HttpBeacon(Beacon):
         elif self.args.response_size == 'RANDOM':
             self.default_response_size = random.randint(200, 100000)  # maleable profile which returns random data in addition to the beacon data
         else:
-            self.default_response_size = random.randint(700, 4000)  # maleable profile which returns th bare minimum data
+            self.default_response_size = random.randint(700, 4000)  # maleable profile which returns the bare minimum data
+
+        self.message_logger.info(f'rolled a default http request size of {self.default_request_size} bytes and a default http response size of {self.default_response_size} bytes. will apply {self.args.data_jitter}% jitter. jitter will {"not" if self.args.cap_data_jitter in [None, ""] else ""} be capped if provided limits are reached.')
 
 
     def clean_up(self, **kwargs):

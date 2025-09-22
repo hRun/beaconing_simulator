@@ -133,6 +133,7 @@ if __name__ == "__main__":
     parser.add_argument("max_requests", help="end the simulation after X requests. default is 720 requests, equating to ~6 hours with a 30 second interval", type=int, default=720)
     parser.add_argument("--absence", help="make a significant pause of X minutes during the test to simulate the device being offline/sleeping/... default is no absence", type=int, default=0)
     parser.add_argument("--active_c2_ratio", help="the percentage of requests which should simulate active usage of the c2 channel. i.e. command and result exchange. default is between 0.1 and 3 percent", type=float, default=0.0)
+    parser.add_argument("--cap_data_jitter", help="add upper an lower limits to the amount of data jitter (in bytes) than will be applied. syntax: lower_limit,upper_limit (e.g. 1000,1500). default is no limits", type=str)
     parser.add_argument("--data_jitter", help="add random jitter to the request size (also to response sizes if log_only is set) in percent. default is 11 percent", type=int, default=11)
     parser.add_argument("--jitter", help="add random jitter to the time intervals between the beaconing requests (in percent of intervals). default is 17 percent", type=int, default=17)
     parser.add_argument("--log_only", help="only write log events as they would be expected from the simulation, don't actually dispatch requests. default is to make real requests", action="store_true", default=False)
