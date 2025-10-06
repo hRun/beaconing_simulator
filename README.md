@@ -58,6 +58,10 @@ options:
   --start_time START_TIME
                         if log_only is set, set the start time of the fake simulation (epoch time stamp expected). otherwise the simulation will start at the current time and end in the future
   --static_ip           a domain might resolve to multiple ips (e.g. when a cdn is used). set this argument to statically log the first observed ip. default is to log a random ip from the set
+  --static_source STATIC_SOURCE
+                        write log events as originating from the statically set source ip or fqdn. default is to look up and use the local device's name
+  --static_user STATIC_USER
+                        write log events as originating from the statically set user. default is to look up and use the current user's name
   --use_dynamic_urls    if using http, use a new randomly generated uri path on each request. default is false
 ```
 
@@ -65,26 +69,24 @@ options:
 ## example
 
 ```
-python beaconing_simulation.py example.com 31 100 --log_only --include_absence 600
+python beaconing_simulation.py example.com 31 100 --log_only --absence 600
 ```
 
 
 ### resulting message log
 
 ```
-2025-06-16 16:50:54,033 - INFO - starting simulation...
-2025-06-16 16:50:54,036 - INFO - will dispatch 100 requests towards "example.com" with an interval of 31 seconds and 10% jitter before ending the simulation.
-2025-06-16 16:50:54,036 - INFO -  background noise as users would generate it will be simulated.
-2025-06-16 16:50:54,037 - INFO - 1.250684973081222% of requests will simulate active usage of the c2 channel.
-2025-06-16 16:50:54,039 - INFO - 600 minutes of absence (no beacons doe to the device being offline/asleep/...) will be simulated after 72 requests.
-2025-06-16 16:50:54,039 - INFO - data exfiltration will be simulated after 92 requests.
-2025-06-16 16:50:54,040 - INFO - simulation will run in log-only mode. no actual requests will be dispatched.
-2025-06-16 16:50:54,052 - INFO - rolled to simulate command transfer and execution on request #41.
-2025-06-16 16:50:54,053 - INFO - reducing beaconing by 130 seconds for the next 3 requests.
-2025-06-16 16:50:54,061 - INFO - hit request #72. sleeping for 600 minutes to simulate the device being offline/asleep/....
-2025-06-16 16:50:54,066 - INFO - rolled to simulate command transfer and execution on request #88.
-2025-06-16 16:50:54,066 - INFO - reducing beaconing by 25 seconds for the next 3 requests.
-2025-06-16 16:50:54,067 - INFO - hit request #92. simulating data exfiltration.
+2025-10-06 15:29:46,812 - INFO - starting simulation...
+2025-10-06 15:29:46,820 - INFO - will dispatch 100 requests towards "example.com" with an interval of 31 seconds and 17% jitter before ending the simulation.
+2025-10-06 15:29:46,821 - INFO - background noise as users would generate it will be simulated.
+2025-10-06 15:29:46,821 - INFO - 0.828% of requests will simulate active usage of the c2 channel.
+2025-10-06 15:29:46,822 - INFO - 600 minutes of absence (no beacons due to the device being offline/asleep/...) will be simulated after 76 requests.
+2025-10-06 15:29:46,822 - INFO - data exfiltration will be simulated after 81 requests.
+2025-10-06 15:29:46,823 - INFO - simulation will run in log-only mode. no actual requests will be dispatched. this should be done in a few seconds.
+2025-10-06 15:29:46,824 - INFO - rolled a default http request size of 7028 bytes and a default http response size of 2580 bytes. will apply 11% jitter. jitter will not be capped if provided limits are reached.
+2025-10-06 15:29:46,871 - INFO - hit request #76. sleeping for 600 minutes to simulate the device being offline/asleep/....
+2025-10-06 15:29:46,873 - INFO - hit request #81. simulating data exfiltration.
+2025-10-06 15:29:47,826 - INFO - done. have a nice day :)
 ```
 
 

@@ -48,8 +48,8 @@ class Beacon():
         self.ABSENCE_START: int         = 0
         self.COMMAND_RATIO: float       = 0.0
         self.EXFIL_START: int           = 0
-        self.HOSTNAME: str              = socket.gethostname()
-        self.USER: str                  = getlogin()  # TODO domain? upn?
+        self.HOSTNAME: str              = args.static_source if args.static_source not in [None, '', ' '] else socket.gethostname()
+        self.USER: str                  = args.static_user if args.static_user not in [None, '', ' '] else getlogin()  # TODO domain? upn?
         self.USER_ACTIVITY_IPS: dict    = {}
         self.USER_ACTIVITY_DOMAINS:list = ['amazon.com', 'cnn.com', 'github.com', 'google.com', 'instagram.com', 'justbean.co', 'office.com', 'reddit.com', 'reuters.com', 'theuselessweb.com', 'tiktok.com', 'x.com', 'youtube.com', '9gag.com']
         self.absent: bool               = False
@@ -62,7 +62,7 @@ class Beacon():
         self.done: bool                 = False
         self.exfil_uri: str             = f'{path_prefix}?__exfil'
         self.fake_timestamp: datetime   = datetime.now(timezone.utc) if self.args.start_time == 0 else datetime.fromtimestamp(self.args.start_time) # format is strftime('%m/%d/%Y %H:%M:%S.%.3f %p')
-        self.destination_index: int      = 0
+        self.destination_index: int     = 0
         self.reduction_count: int       = 0
         self.reduction_time:  int       = 0
 

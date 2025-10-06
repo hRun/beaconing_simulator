@@ -148,6 +148,8 @@ if __name__ == "__main__":
     parser.add_argument("--round_robin_logic", help="set the logic to iterate destinations when multiple were provided. switch domains after every x requests or randomly", type=str, choices=['RANDOM', '1', '5', '10', '50', '100'], default='1')
     parser.add_argument("--start_time", help="if log_only is set, set the start time of the fake simulation (epoch time stamp expected). otherwise the simulation will start at the current time and end in the future", type=int, default=0)
     parser.add_argument("--static_ip", help="a domain might resolve to multiple ips (e.g. when a cdn is used). set this argument to statically log the first observed ip. default is to log a random ip from the set", action="store_true", default=False)
+    parser.add_argument("--static_source", help="write log events as originating from the statically set source ip or fqdn. default is to look up and use the local device's name", type=str)
+    parser.add_argument("--static_user", help="write log events as originating from the statically set user. default is to look up and use the current user's name", type=str)
     parser.add_argument("--use_dynamic_urls", help="if using http, use a new randomly generated uri path on each request. default is false", action="store_true", default=False)
     args   = parser.parse_args()
     beacon = None
