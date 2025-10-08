@@ -73,6 +73,13 @@ def simulate_beaconing(beacon):
 
             beacon.exfil_iteration()
             continue
+        # only relevant for the HTTPSxSOCKS mode
+        if hasattr(beacon, 'SOCKS_REQUESTS'):
+            if i in beacon.SOCKS_REQUESTS:
+                beacon.message_logger.info(f'hit request #{i}. simulating temporary usage of device as socks proxy.')
+
+                beacon.socks_iteration()
+                continue
 
         beacon.normal_iteration()
 
@@ -141,7 +148,7 @@ if __name__ == "__main__":
     parser.add_argument("--no_chunking", help="don't use chunking for http requests. i.e. send one large one instead of multiple small requests. default is to use chunking as many server have maximum sizes they handle", action="store_true", default=False)
     parser.add_argument("--no_exfil", help="don't simulate the beacon exfiltrating data (similar to c2, but with significantly larger outflow). default is to simulate data exfiltration", action="store_true", default=False)
     parser.add_argument("--no_noise", help="don't make semi-random, semi-realistic non-beaconing requests in the background to add noise (as user activity would). default is to make background noise", action="store_true", default=False)
-    parser.add_argument("--protocol", help="network protocol to use for beaconing communication. default is http", type=str, choices=['HTTP', 'HTTPS', 'SOCKS', 'WEBSOCKET'], default='HTTP')  # TODO choices=['DNS', 'TCP', 'UDP', '...']
+    parser.add_argument("--protocol", help="network protocol to use for beaconing communication. default is http", type=str, choices=['HTTP', 'HTTPS', 'HTTPSxSOCKS', 'SOCKS', 'WEBSOCKET'], default='HTTP')  # TODO choices=['DNS', 'TCP', 'UDP', '...']
     parser.add_argument("--reduce_interval_after_c2", help="reduce the polling interval after an active session, simulating how higher stealth could be achieved while the operator works on obtained data", action="store_true", default=False)
     parser.add_argument("--response_size", help="if log_only is set, set the http response size range to use. this is to mimic different malleable profile configurations (e.g. a profile which returns a legitimate-looking web page vs. one that returns the bare minimum)", type=str, choices=['NORMAL', 'LARGE', 'RANDOM'], default='NORMAL')
     parser.add_argument("--request_method", help="if using http, the request method to use for beaconing. mix will use get for requests, post for responses. default is get", type=str, choices=['GET', 'POST', 'PUT', 'MIXED'], default='GET')  # TODO HEAD?
@@ -156,6 +163,8 @@ if __name__ == "__main__":
 
 
     if args.protocol in ['HTTP', 'HTTPS']:
+        beacon = HttpBeacon(args)
+    elif args.protocol == 'HTTPSxSOCKS':
         beacon = HttpBeacon(args)
     elif args.protocol == 'DNS':
         pass  # TODO

@@ -44,7 +44,7 @@ class Beacon():
         self.event_logger.addHandler(eh)
 
 
-        path_prefix                     = ['awesoms-real-font-4real.woff', 'jquery-0.0.0.js', 'index.html', 'index.php', '16x1024banner.png'][random.randint(0, 4)]
+        path_prefix                     = ['awesome-real-font-4real.woff', 'jquery-0.0.0.js', 'index.html', 'index.php', '16x1024banner.png'][random.randint(0, 4)]
         self.ABSENCE_START: int         = 0
         self.COMMAND_RATIO: float       = 0.0
         self.EXFIL_START: int           = 0
@@ -63,6 +63,7 @@ class Beacon():
         self.exfil_uri: str             = f'{path_prefix}?__exfil'
         self.fake_timestamp: datetime   = datetime.now(timezone.utc) if self.args.start_time == 0 else datetime.fromtimestamp(self.args.start_time) # format is strftime('%m/%d/%Y %H:%M:%S.%.3f %p')
         self.destination_index: int     = 0
+        self.proxy_uri: str             = f'{path_prefix}?__proxy'
         self.reduction_count: int       = 0
         self.reduction_time:  int       = 0
 

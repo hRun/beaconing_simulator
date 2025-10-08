@@ -32,6 +32,12 @@ class HttpBeacon(Beacon):
 
         self.message_logger.info(f'rolled a default http request size of {self.default_request_size} bytes and a default http response size of {self.default_response_size} bytes. will apply {self.args.data_jitter}% jitter. jitter will {"not" if self.args.cap_data_jitter in [None, ""] else ""} be capped if provided limits are reached.')
 
+        if self.args.protocol == 'HTTPSxSOCKS':
+            self.SOCKS_REQUESTS     = [random.randint(5, self.args.max_requests-1) for i in range(1, random.randint(2, 20))]  # pre-roll up to 20 random requests which will become socks
+            self.MAX_SOCKS_DURATION = random.randint(2, 20)  # minutes
+            self.args.protocol      = 'HTTPS'
+            self.message_logger.info(f'rolled to execute {len(self.SOCKS_REQUESTS)} instances of sudden SOCKS traffic, up to {self.MAX_SOCKS_DURATION} minutes each, as if the device was used as reverse proxy by the c2 server to run code (e.g. enumeration).')
+
 
     def clean_up(self, **kwargs):
         pass  # no clean up required
@@ -151,6 +157,30 @@ class HttpBeacon(Beacon):
             self.fake_timestamp += timedelta(seconds=exfil_size/512000)  # 1s/512kb
 
 
+    def socks_iteration_log_only(self):
+        """
+        one iteration of the simulation where events are only logged, no actual request is dispatched
+        """
+        tracker = 0  # seconds
+
+        while tracker < random.randint(2, self.MAX_SOCKS_DURATION)*60:
+            if random.randint(1, 2) == 1:
+                self.write_log_event(self.beaconing_uri, self.default_request_size, self.jitter_data(self.default_response_size), 'GET')  # continuation of "empty" requests
+
+            self.write_log_event(f'{self.proxy_uri}&__payload={''.join(random.choices(string.ascii_letters + string.digits, k=24))}', random.randint(5000, 30000), self.jitter_data(self.default_response_size), 'POST')
+            self.write_log_event(self.proxy_uri, self.jitter_data(self.default_request_size*random.randint(5, 10)), self.jitter_data(self.default_response_size), 'GET')
+
+            if random.randint(1, 2) == 1:
+                self.write_log_event(self.beaconing_uri, self.default_request_size, self.jitter_data(self.default_response_size), 'GET')  # continuation of "empty" requests
+            self.write_log_event(self.beaconing_uri, self.default_request_size, self.jitter_data(self.default_response_size), 'GET')  # continuation of "empty" requests
+
+            time_increase        = random.randint(25, 100)  # seems like appropriate values (ms). can be changed though
+            tracker             += time_increase/1000
+            self.fake_timestamp += timedelta(milliseconds=time_increase)
+
+        self.fake_timestamp += timedelta(milliseconds=random.randint(100, 400))  # seems like appropriate values. can be changed though
+
+
     def normal_iteration_log_only(self):
         """
         one iteration of the simulation where events are only logged, no actual request is dispatched
@@ -213,6 +243,22 @@ class HttpBeacon(Beacon):
 
         if self.args.log_only:
             self.exfil_iteration_log_only()
+        else:
+            try:
+                pass  # TODO requires a server-side
+            except Exception:
+                pass
+
+
+    def socks_iteration(self):
+        """
+        one beaconing iteration where the device is used as reverse proxy by the c2 server for running code (e.g. enumeration)
+        """
+        if self.args.use_dynamic_urls:
+            self.proxy_uri = f'{''.join(random.choices(string.ascii_letters + string.digits, k=16))}?__proxy'
+
+        if self.args.log_only:
+            self.socks_iteration_log_only()
         else:
             try:
                 pass  # TODO requires a server-side
