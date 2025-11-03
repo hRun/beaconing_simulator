@@ -164,15 +164,24 @@ class HttpBeacon(Beacon):
         tracker = 0  # seconds
 
         while tracker < random.randint(2, self.MAX_SOCKS_DURATION)*60:
-            if random.randint(1, 2) == 1:
-                self.write_log_event(self.beaconing_uri, self.default_request_size, self.jitter_data(self.default_response_size), 'GET')  # continuation of "empty" requests
+            if random.randint(1, 2) == 1:  # continuation of "empty" requests with some randomness as observed in real-world examples
+                if self.args.request_method == 'MIXED':
+                    self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.jitter_data(self.default_response_size), 'GET')
+                else:
+                    self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.jitter_data(self.default_response_size))
 
             self.write_log_event(f'{self.proxy_uri}&__payload={''.join(random.choices(string.ascii_letters + string.digits, k=24))}', random.randint(5000, 30000), self.jitter_data(self.default_response_size), 'POST')
             self.write_log_event(self.proxy_uri, self.jitter_data(self.default_request_size*random.randint(5, 10)), self.jitter_data(self.default_response_size), 'GET')
 
-            if random.randint(1, 2) == 1:
-                self.write_log_event(self.beaconing_uri, self.default_request_size, self.jitter_data(self.default_response_size), 'GET')  # continuation of "empty" requests
-            self.write_log_event(self.beaconing_uri, self.default_request_size, self.jitter_data(self.default_response_size), 'GET')  # continuation of "empty" requests
+            if random.randint(1, 2) == 1:  # continuation of "empty" requests with some randomness as observed in real-world examples
+                if self.args.request_method == 'MIXED':
+                    self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.jitter_data(self.default_response_size), 'GET')
+                else:
+                    self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.jitter_data(self.default_response_size))
+            if self.args.request_method == 'MIXED':  # continuation of "empty" requests
+                self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.jitter_data(self.default_response_size), 'GET')
+            else:
+                self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.jitter_data(self.default_response_size))
 
             time_increase        = random.randint(25, 100)  # seems like appropriate values (ms). can be changed though
             tracker             += time_increase/1000
