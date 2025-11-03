@@ -33,6 +33,7 @@ class HttpBeacon(Beacon):
         self.message_logger.info(f'rolled a default http request size of {self.default_request_size} bytes and a default http response size of {self.default_response_size} bytes. will apply {self.args.data_jitter}% jitter. jitter will {"not" if self.args.cap_data_jitter in [None, ""] else ""} be capped if provided limits are reached.')
 
         if self.args.protocol == 'HTTPSxSOCKS':
+            # TODO eventually make this configurable. as-is it might mess with the accuracy of data for shorter beacons
             self.SOCKS_REQUESTS     = [random.randint(5, self.args.max_requests-1) for i in range(1, random.randint(2, 20))]  # pre-roll up to 20 random requests which will become socks
             self.MAX_SOCKS_DURATION = random.randint(2, 20)  # minutes
             self.args.protocol      = 'HTTPS'
@@ -157,28 +158,45 @@ class HttpBeacon(Beacon):
             self.fake_timestamp += timedelta(seconds=exfil_size/512000)  # 1s/512kb
 
 
+    # TODO better logic for continuation of empty requests (i.e. make them continue more consistently with the normal interval's sleep())
     def socks_iteration_log_only(self):
         """
         one iteration of the simulation where events are only logged, no actual request is dispatched
         """
         tracker = 0  # seconds
 
+        # one request which initializes the socks session
+        if self.args.request_method == 'MIXED':
+            self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.jitter_data(self.default_response_size)+random.randint(4000, 8000), 'GET')
+        else:
+            self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.jitter_data(self.default_response_size)+random.randint(4000, 8000))
+        self.fake_timestamp += timedelta(milliseconds=random.randint(100, 400))  # seems like appropriate values. can be changed though
+
         while tracker < random.randint(2, self.MAX_SOCKS_DURATION)*60:
-            if random.randint(1, 2) == 1:  # continuation of "empty" requests with some randomness as observed in real-world examples
+            # continuation of "empty" requests with some randomness as observed in real-world examples
+            if random.randint(1, 4) == 1:
                 if self.args.request_method == 'MIXED':
                     self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.jitter_data(self.default_response_size), 'GET')
                 else:
                     self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.jitter_data(self.default_response_size))
 
-            self.write_log_event(f'{self.proxy_uri}&__payload={''.join(random.choices(string.ascii_letters + string.digits, k=24))}', random.randint(5000, 30000), self.jitter_data(self.default_response_size), 'POST')
-            self.write_log_event(self.proxy_uri, self.jitter_data(self.default_request_size*random.randint(5, 10)), self.jitter_data(self.default_response_size), 'GET')
+            # socks session traffic
+            # traffic size during socks sessions seems to be somewhat static based on slightly simplified real-world observations (in case of cs) for both request and response
+            if self.args.request_method == 'MIXED':
+                self.write_log_event(f'{self.proxy_uri}&__payload={''.join(random.choices(string.ascii_letters + string.digits, k=24))}', random.randint(1000, 8000)*random.uniform(0.95, 1.07), random.randint(1000, 8000)*random.uniform(0.95, 1.07), 'POST')
+                self.write_log_event(self.proxy_uri, random.randint(1000, 8000)*random.uniform(0.95, 1.07), random.randint(1000, 8000)*random.uniform(0.95, 1.07), 'GET')
+            else:
+                self.write_log_event(f'{self.proxy_uri}&__payload={''.join(random.choices(string.ascii_letters + string.digits, k=24))}', random.randint(1000, 8000)*random.uniform(0.95, 1.07), random.randint(1000, 8000)*random.uniform(0.95, 1.07))
+                self.write_log_event(self.proxy_uri, random.randint(1000, 8000)*random.uniform(0.95, 1.07), random.randint(1000, 8000)*random.uniform(0.95, 1.07))
 
-            if random.randint(1, 2) == 1:  # continuation of "empty" requests with some randomness as observed in real-world examples
+            # continuation of "empty" requests with some randomness as observed in real-world examples
+            if random.randint(1, 4) == 1:
                 if self.args.request_method == 'MIXED':
                     self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.jitter_data(self.default_response_size), 'GET')
                 else:
                     self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.jitter_data(self.default_response_size))
-            if self.args.request_method == 'MIXED':  # continuation of "empty" requests
+            # continuation of "empty" requests. one request for sure
+            if self.args.request_method == 'MIXED':
                 self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.jitter_data(self.default_response_size), 'GET')
             else:
                 self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.jitter_data(self.default_response_size))
