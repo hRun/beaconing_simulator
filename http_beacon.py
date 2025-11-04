@@ -33,11 +33,10 @@ class HttpBeacon(Beacon):
         self.message_logger.info(f'rolled a default http request size of {self.default_request_size} bytes and a default http response size of {self.default_response_size} bytes. will apply {self.args.data_jitter}% jitter. jitter will {"not" if self.args.cap_data_jitter in [None, ""] else ""} be capped if provided limits are reached.')
 
         if self.args.protocol == 'HTTPSxSOCKS':
-            # TODO eventually make this configurable. as-is it might mess with the accuracy of data for shorter beacons
-            self.SOCKS_REQUESTS     = [random.randint(5, self.args.max_requests-1) for i in range(1, random.randint(2, 20))]  # pre-roll up to 20 random requests which will become socks
+            self.SOCKS_REQUESTS     = [random.randint(10, self.args.max_requests-1) for i in range(1, self.args.socks_sessions)]  # pre-roll the requests during which socks sessions should start
             self.MAX_SOCKS_DURATION = random.randint(2, 20)  # minutes
             self.args.protocol      = 'HTTPS'
-            self.message_logger.info(f'rolled to execute {len(self.SOCKS_REQUESTS)} instances of sudden SOCKS traffic, up to {self.MAX_SOCKS_DURATION} minutes each, as if the device was used as reverse proxy by the c2 server to run code (e.g. enumeration).')
+            self.message_logger.info(f'{self.args.socks_sessions} instances of sudden SOCKS traffic, up to {self.MAX_SOCKS_DURATION} minutes each, will be simulated. as if the device was used as reverse proxy by the c2 server to run code (e.g. enumeration).')
 
 
     def clean_up(self, **kwargs):
@@ -158,52 +157,48 @@ class HttpBeacon(Beacon):
             self.fake_timestamp += timedelta(seconds=exfil_size/512000)  # 1s/512kb
 
 
-    # TODO better logic for continuation of empty requests (i.e. make them continue more consistently with the normal interval's sleep())
     def socks_iteration_log_only(self):
         """
         one iteration of the simulation where events are only logged, no actual request is dispatched
         """
-        tracker = 0  # seconds
+        socks_session_duration = 0  # seconds. used to determine when the socks session is supposed to end
+        normal_checkin_tracker = 0  # seconds. used to determine when normal beaconing check in requests need to be dispatched in the background in parallel to the socks traffic
 
-        # one request which initializes the socks session
+        # one normal checkin request which initializes the socks session (indicated by a lerger than normal response size)
         if self.args.request_method == 'MIXED':
             self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.jitter_data(self.default_response_size)+random.randint(4000, 8000), 'GET')
         else:
             self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.jitter_data(self.default_response_size)+random.randint(4000, 8000))
         self.fake_timestamp += timedelta(milliseconds=random.randint(100, 400))  # seems like appropriate values. can be changed though
 
-        while tracker < random.randint(2, self.MAX_SOCKS_DURATION)*60:
-            # continuation of "empty" requests with some randomness as observed in real-world examples
-            if random.randint(1, 4) == 1:
+        # run the socks session as long as rolled
+        while socks_session_duration < random.randint(1, self.MAX_SOCKS_DURATION)*60:
+            # socks session ran as long as the usual beaconing interval. so a normal beaconing check in request must happen in the background. ignore time jitter for simplicity
+            # TODO this could also happen in between the two socks packets. but considering the minimal time difference, this is probably not important for detection
+            if normal_checkin_tracker >= self.args.interval:
                 if self.args.request_method == 'MIXED':
                     self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.jitter_data(self.default_response_size), 'GET')
                 else:
                     self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.jitter_data(self.default_response_size))
+                normal_checkin_tracker = 0  # reset
 
             # socks session traffic
             # traffic size during socks sessions seems to be somewhat static based on slightly simplified real-world observations (in case of cs) for both request and response
             if self.args.request_method == 'MIXED':
                 self.write_log_event(f'{self.proxy_uri}&__payload={''.join(random.choices(string.ascii_letters + string.digits, k=24))}', random.randint(1000, 8000)*random.uniform(0.95, 1.07), random.randint(1000, 8000)*random.uniform(0.95, 1.07), 'POST')
+                time_increase1       = random.randint(25, 100)
+                self.fake_timestamp += timedelta(milliseconds=time_increase1)
                 self.write_log_event(self.proxy_uri, random.randint(1000, 8000)*random.uniform(0.95, 1.07), random.randint(1000, 8000)*random.uniform(0.95, 1.07), 'GET')
             else:
                 self.write_log_event(f'{self.proxy_uri}&__payload={''.join(random.choices(string.ascii_letters + string.digits, k=24))}', random.randint(1000, 8000)*random.uniform(0.95, 1.07), random.randint(1000, 8000)*random.uniform(0.95, 1.07))
+                time_increase1       = random.randint(25, 100)
+                self.fake_timestamp += timedelta(milliseconds=time_increase1)
                 self.write_log_event(self.proxy_uri, random.randint(1000, 8000)*random.uniform(0.95, 1.07), random.randint(1000, 8000)*random.uniform(0.95, 1.07))
 
-            # continuation of "empty" requests with some randomness as observed in real-world examples
-            if random.randint(1, 4) == 1:
-                if self.args.request_method == 'MIXED':
-                    self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.jitter_data(self.default_response_size), 'GET')
-                else:
-                    self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.jitter_data(self.default_response_size))
-            # continuation of "empty" requests. one request for sure
-            if self.args.request_method == 'MIXED':
-                self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.jitter_data(self.default_response_size), 'GET')
-            else:
-                self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.jitter_data(self.default_response_size))
-
-            time_increase        = random.randint(25, 100)  # seems like appropriate values (ms). can be changed though
-            tracker             += time_increase/1000
-            self.fake_timestamp += timedelta(milliseconds=time_increase)
+            time_increase2          = random.randint(100, 400)  # seems like appropriate values (ms). can be changed though
+            socks_session_duration += (time_increase1+time_increase2)/1000
+            normal_checkin_tracker += (time_increase1+time_increase2)/1000
+            self.fake_timestamp    += timedelta(milliseconds=time_increase2)
 
         self.fake_timestamp += timedelta(milliseconds=random.randint(100, 400))  # seems like appropriate values. can be changed though
 

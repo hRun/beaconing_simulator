@@ -18,9 +18,10 @@ a python script to simulate malware beaconing in a slightly more sophistocated w
 ## usage
 
 ```
-usage: beaconing_simulation.py [-h] [--absence ABSENCE] [--active_c2_ratio ACTIVE_C2_RATIO] [--data_jitter DATA_JITTER] [--jitter JITTER] [--log_only] [--no_c2] [--no_chunking] [--no_exfil] [--no_noise]
-                               [--protocol {HTTP,HTTPS,SOCKS,WEBSOCKET}] [--reduce_interval_after_c2] [--response_size {NORMAL,LARGE,RANDOM}] [--request_method {GET,POST,PUT,MIXED}]
-                               [--round_robin_logic {RANDOM,1,5,10,50,100}] [--start_time START_TIME] [--static_ip] [--use_dynamic_urls]
+usage: beaconing_simulation.py [-h] [--absence ABSENCE] [--active_c2_ratio ACTIVE_C2_RATIO] [--cap_data_jitter CAP_DATA_JITTER] [--data_jitter DATA_JITTER] [--jitter JITTER] [--log_only] [--no_c2]
+                               [--no_chunking] [--no_exfil] [--no_noise] [--protocol {HTTP,HTTPS,HTTPSxSOCKS,SOCKS,WEBSOCKET}] [--reduce_interval_after_c2] [--response_size {NORMAL,LARGE,RANDOM}]
+                               [--request_method {GET,POST,PUT,MIXED}] [--round_robin_logic {RANDOM,1,5,10,50,100}] [--socks_sessions SOCKS_SESSIONS] [--start_time START_TIME] [--static_ip]
+                               [--static_source STATIC_SOURCE] [--static_user STATIC_USER] [--use_dynamic_urls]
                                destinations interval max_requests
 
 positional arguments:
@@ -44,7 +45,7 @@ options:
   --no_chunking         don't use chunking for http requests. i.e. send one large one instead of multiple small requests. default is to use chunking as many server have maximum sizes they handle
   --no_exfil            don't simulate the beacon exfiltrating data (similar to c2, but with significantly larger outflow). default is to simulate data exfiltration
   --no_noise            don't make semi-random, semi-realistic non-beaconing requests in the background to add noise (as user activity would). default is to make background noise
-  --protocol {HTTP,HTTPS,SOCKS,WEBSOCKET}
+  --protocol {HTTP,HTTPS,HTTPSxSOCKS,SOCKS,WEBSOCKET}
                         network protocol to use for beaconing communication. default is http
   --reduce_interval_after_c2
                         reduce the polling interval after an active session, simulating how higher stealth could be achieved while the operator works on obtained data
@@ -55,6 +56,8 @@ options:
                         if using http, the request method to use for beaconing. mix will use get for requests, post for responses. default is get
   --round_robin_logic {RANDOM,1,5,10,50,100}
                         set the logic to iterate destinations when multiple were provided. switch domains after every x requests or randomly
+  --socks_sessions SOCKS_SESSIONS
+                        if protocol is set to HTTPSxSOCKS, start this many socks sessions over the duration of the beacon
   --start_time START_TIME
                         if log_only is set, set the start time of the fake simulation (epoch time stamp expected). otherwise the simulation will start at the current time and end in the future
   --static_ip           a domain might resolve to multiple ips (e.g. when a cdn is used). set this argument to statically log the first observed ip. default is to log a random ip from the set
