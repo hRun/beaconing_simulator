@@ -55,7 +55,7 @@ class Beacon():
         self.absent: bool               = False
         self.args                       = args
         self.beaconing_uri: str         = f'{path_prefix}?__ping'
-        self.chunk_size: int            = 0 if self.args.no_chunking is True else 511999 if self.args.protocol in ['HTTP', 'HTTPS'] and self.args.request_method in ['MIXED', 'POST'] else 8191
+        self.chunk_size: int            = 0 if self.args.no_chunking is True else 511999 if self.args.protocol in ['HTTP', 'HTTPS', 'HTTPSxSOCKS'] and self.args.request_method in ['MIXED', 'POST'] else 8191
         self.command_uri: str           = f'{path_prefix}?__c2'
         self.destinations: list         = []  # {'domain': '', 'ips': [], 'primary': ''}
         self.discovery_phase: bool      = True

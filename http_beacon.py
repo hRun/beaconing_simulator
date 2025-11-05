@@ -33,10 +33,11 @@ class HttpBeacon(Beacon):
         self.message_logger.info(f'rolled a default http request size of {self.default_request_size} bytes and a default http response size of {self.default_response_size} bytes. will apply {self.args.data_jitter}% jitter. jitter will {"not" if self.args.cap_data_jitter in [None, ""] else ""} be capped if provided limits are reached.')
 
         if self.args.protocol == 'HTTPSxSOCKS':
-            self.SOCKS_REQUESTS     = [random.randint(10, self.args.max_requests-1) for i in range(1, self.args.socks_sessions)]  # pre-roll the requests during which socks sessions should start
+            session_amount          = random.randint(1, self.args.max_socks_sessions) if self.args.max_socks_sessions >=1 and self.args.max_socks_sessions < self.args.max_requests-11 else random.randint(1, 4)  # roll exact number of socks sessions to simulate. don't allow invalid values
+            self.SOCKS_REQUESTS     = [random.randint(10, self.args.max_requests-1) for i in range(1, session_amount)]  # pre-roll the requests during which socks sessions should start
             self.MAX_SOCKS_DURATION = random.randint(2, 20)  # minutes
             self.args.protocol      = 'HTTPS'
-            self.message_logger.info(f'{self.args.socks_sessions} instances of sudden SOCKS traffic, up to {self.MAX_SOCKS_DURATION} minutes each, will be simulated. as if the device was used as reverse proxy by the c2 server to run code (e.g. enumeration).')
+            self.message_logger.info(f'{session_amount} instances of sudden SOCKS traffic, up to {self.MAX_SOCKS_DURATION} minutes each, will be simulated. as if the device was used as reverse proxy by the c2 server to run code (e.g. enumeration).')
 
 
     def clean_up(self, **kwargs):
