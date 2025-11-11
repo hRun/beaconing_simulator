@@ -190,12 +190,12 @@ class HttpBeacon(Beacon):
             # traffic size during socks sessions seems to be somewhat static based on slightly simplified real-world observations (in case of cs) for both request and response
             if self.args.request_method == 'MIXED':
                 self.write_log_event(f'{self.proxy_uri}&__payload={''.join(random.choices(string.ascii_letters + string.digits, k=24))}', random.randint(1000, 8000)*random.uniform(0.95, 1.07), random.randint(1000, 8000)*random.uniform(0.95, 1.07), 'POST')
-                time_increase1       = random.randint(15, 50)
+                time_increase1       = random.randint(100, 200)
                 self.fake_timestamp += timedelta(milliseconds=time_increase1)
                 self.write_log_event(self.proxy_uri, random.randint(1000, 8000)*random.uniform(0.95, 1.07), random.randint(1000, 8000)*random.uniform(0.95, 1.07), 'GET')
             else:
                 self.write_log_event(f'{self.proxy_uri}&__payload={''.join(random.choices(string.ascii_letters + string.digits, k=24))}', random.randint(1000, 8000)*random.uniform(0.95, 1.07), random.randint(1000, 8000)*random.uniform(0.95, 1.07))
-                time_increase1       = random.randint(15, 50)
+                time_increase1       = random.randint(100, 200)
                 self.fake_timestamp += timedelta(milliseconds=time_increase1)
                 self.write_log_event(self.proxy_uri, random.randint(1000, 8000)*random.uniform(0.95, 1.07), random.randint(1000, 8000)*random.uniform(0.95, 1.07))
 
