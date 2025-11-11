@@ -34,7 +34,7 @@ class HttpBeacon(Beacon):
 
         if self.args.protocol == 'HTTPSxSOCKS':
             session_amount          = random.randint(1, self.args.max_socks_sessions) if self.args.max_socks_sessions >=1 and self.args.max_socks_sessions < self.args.max_requests-11 else random.randint(1, 4)  # roll exact number of socks sessions to simulate. don't allow invalid values
-            self.SOCKS_REQUESTS     = [random.randint(10, self.args.max_requests-1) for i in range(1, session_amount)]  # pre-roll the requests during which socks sessions should start
+            self.SOCKS_REQUESTS     = [random.randint(10, self.args.max_requests-1) for i in range(1, session_amount+1)]  # pre-roll the requests during which socks sessions should start
             self.MAX_SOCKS_DURATION = random.randint(2, 20)  # minutes
             self.args.protocol      = 'HTTPS'
             self.message_logger.info(f'{session_amount} instances of sudden SOCKS traffic, up to {self.MAX_SOCKS_DURATION} minutes each, will be simulated. as if the device was used as reverse proxy by the c2 server to run code (e.g. enumeration).')
@@ -162,8 +162,11 @@ class HttpBeacon(Beacon):
         """
         one iteration of the simulation where events are only logged, no actual request is dispatched
         """
-        socks_session_duration = 0  # seconds. used to determine when the socks session is supposed to end
-        normal_checkin_tracker = 0  # seconds. used to determine when normal beaconing check in requests need to be dispatched in the background in parallel to the socks traffic
+        socks_session_duration_tracker = 0  # seconds. used to determine when the socks session is supposed to end
+        normal_checkin_tracker         = 0  # seconds. used to determine when normal beaconing check in requests need to be dispatched in the background in parallel to the socks traffic
+        socks_session_duration         = random.randint(1, self.MAX_SOCKS_DURATION)*60
+
+        self.message_logger.info(f'simulated socks session will last for approximately {int(socks_session_duration/60)} minutes.')
 
         # one normal checkin request which initializes the socks session (indicated by a lerger than normal response size)
         if self.args.request_method == 'MIXED':
@@ -173,7 +176,7 @@ class HttpBeacon(Beacon):
         self.fake_timestamp += timedelta(milliseconds=random.randint(100, 400))  # seems like appropriate values. can be changed though
 
         # run the socks session as long as rolled
-        while socks_session_duration < random.randint(1, self.MAX_SOCKS_DURATION)*60:
+        while socks_session_duration_tracker < socks_session_duration:
             # socks session ran as long as the usual beaconing interval. so a normal beaconing check in request must happen in the background. ignore time jitter for simplicity
             # TODO this could also happen in between the two socks packets. but considering the minimal time difference, this is probably not important for detection
             if normal_checkin_tracker >= self.args.interval:
@@ -187,19 +190,19 @@ class HttpBeacon(Beacon):
             # traffic size during socks sessions seems to be somewhat static based on slightly simplified real-world observations (in case of cs) for both request and response
             if self.args.request_method == 'MIXED':
                 self.write_log_event(f'{self.proxy_uri}&__payload={''.join(random.choices(string.ascii_letters + string.digits, k=24))}', random.randint(1000, 8000)*random.uniform(0.95, 1.07), random.randint(1000, 8000)*random.uniform(0.95, 1.07), 'POST')
-                time_increase1       = random.randint(25, 100)
+                time_increase1       = random.randint(15, 50)
                 self.fake_timestamp += timedelta(milliseconds=time_increase1)
                 self.write_log_event(self.proxy_uri, random.randint(1000, 8000)*random.uniform(0.95, 1.07), random.randint(1000, 8000)*random.uniform(0.95, 1.07), 'GET')
             else:
                 self.write_log_event(f'{self.proxy_uri}&__payload={''.join(random.choices(string.ascii_letters + string.digits, k=24))}', random.randint(1000, 8000)*random.uniform(0.95, 1.07), random.randint(1000, 8000)*random.uniform(0.95, 1.07))
-                time_increase1       = random.randint(25, 100)
+                time_increase1       = random.randint(15, 50)
                 self.fake_timestamp += timedelta(milliseconds=time_increase1)
                 self.write_log_event(self.proxy_uri, random.randint(1000, 8000)*random.uniform(0.95, 1.07), random.randint(1000, 8000)*random.uniform(0.95, 1.07))
 
-            time_increase2          = random.randint(100, 400)  # seems like appropriate values (ms). can be changed though
-            socks_session_duration += (time_increase1+time_increase2)/1000
-            normal_checkin_tracker += (time_increase1+time_increase2)/1000
-            self.fake_timestamp    += timedelta(milliseconds=time_increase2)
+            time_increase2                  = random.randint(100, 200)  # seems like appropriate values (ms). can be changed though
+            socks_session_duration_tracker += (time_increase1+time_increase2)/1000
+            normal_checkin_tracker         += (time_increase1+time_increase2)/1000
+            self.fake_timestamp            += timedelta(milliseconds=time_increase2)
 
         self.fake_timestamp += timedelta(milliseconds=random.randint(100, 400))  # seems like appropriate values. can be changed though
 
