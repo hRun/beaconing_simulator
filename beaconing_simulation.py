@@ -2,12 +2,15 @@
 a script to simulate malware beaconing in a slightly more sophistocated way than just sending a http get request each x seconds with some jitter
 
 features:
+    - support of multiple protocols and http methods (more tbd)
+    - jitter, data jitter, intervals and maximum number of requests obviously, as well as some additional options inspired by sliver, mythic and cobalt strike
+    - run the simulation in a "log only" mode, not making any actual network requests, but writing a log file which looks similar to what your proxy/etc. would produce
+    - simulate background noise caused by legitimate user activity during beacons
+    - simulate usage of round robin in different modes
+    - simulate the operator starting an interactive session and the beacon receiving a command from the c2 server with various configuration options
+    - simulate http beacons going into socks mode as if they act as (reverse) proxy with various configuration options
+    - simulate the beacon exfiltrating data (chunked or not)
     - simulate the beacon halting for a period of time due to the compromised device being switched off / asleep / ...
-    - simulate the beacon receiving a command from the c2 server: multiple larger responses and larger requests to immitate commands and execution results going back and forth for a few minutes. the beacon then slows down for a while assuming the operator works on the results
-    - simulate the beacon exfiltrating data: a very large request followed by some silence 
-    - simulate parallel user activity as background noise
-    - run the simulation in a "log only" mode, not making any actual network requests, but writing a log file which should look similar to what your proxy/etc. would produce
-    - jitter, intervals and maximum number of requests obviously, round robin, multiple protocols, etc.
 """
 
 # TODO simulation of c2 and exfil requires a server-side process to control response sizes. one endpoint for regular small responses, one endpoint for big responses (tool transfer / sending commands) -> size should change after each request, one endpoint for random responses (noise)
@@ -35,8 +38,6 @@ def simulate_beaconing(beacon):
     Args:
         session: asynchonous http session
     """
-    round_robin_tracker = 1
-
     for i in range(beacon.args.max_requests):
         beacon.sleep()
 
@@ -46,6 +47,7 @@ def simulate_beaconing(beacon):
                 beacon.message_logger.info(f'rolled to simulate command transfer and execution on request #{i}.')
 
                 beacon.c2_iteration()
+                beacon.round_robin()
                 beacon.discovery_phase = False  # assume a discovery phase for the first c2 usage where output will be larger than during subsequent usage
 
                 # temporarily increase beaconing interval to simulate the attacker needing less beacons while working on the received data
@@ -56,6 +58,7 @@ def simulate_beaconing(beacon):
 
                     beacon.message_logger.info(f'reducing beaconing by {beacon.reduction_time} seconds for the next {beacon.reduction_count} requests.')
                 continue
+
         if beacon.ABSENCE_START > 0 and i == beacon.ABSENCE_START:
             beacon.message_logger.info(f'hit request #{i}. sleeping for {beacon.args.absence} minutes to simulate the device being offline/asleep/....')
 
@@ -68,44 +71,25 @@ def simulate_beaconing(beacon):
 
             beacon.absent = False
             continue
+
         if beacon.EXFIL_START > 0 and i == beacon.EXFIL_START:
             beacon.message_logger.info(f'hit request #{i}. simulating data exfiltration.')
 
             beacon.exfil_iteration()
+            beacon.round_robin()
             continue
+
         # only relevant for the HTTPSxSOCKS mode
         if hasattr(beacon, 'SOCKS_REQUESTS'):
             if i in beacon.SOCKS_REQUESTS:
                 beacon.message_logger.info(f'hit request #{i}. simulating temporary usage of device as socks proxy.')
 
                 beacon.socks_iteration()
+                beacon.round_robin()
                 continue
 
         beacon.normal_iteration()
-
-        if beacon.args.round_robin_logic == '1':
-            beacon.next_destination()
-        elif beacon.args.round_robin_logic == '5':
-            if round_robin_tracker == 5:
-                beacon.next_destination()
-                round_robin_tracker = 1
-        elif beacon.args.round_robin_logic == '10':
-            if round_robin_tracker == 10:
-                beacon.next_destination()
-                round_robin_tracker = 1
-        elif beacon.args.round_robin_logic == '50':
-            if round_robin_tracker == 50:
-                beacon.next_destination()
-                round_robin_tracker = 1
-        elif beacon.args.round_robin_logic == '100':
-            if round_robin_tracker == 100:
-                beacon.next_destination()
-                round_robin_tracker = 1
-        elif beacon.args.round_robin_logic == 'RANDOM':
-            if random.randint(1, 100) < 20:
-                beacon.next_destination()
-
-        round_robin_tracker += 1
+        beacon.round_robin()
 
     beacon.done = True
 
@@ -149,6 +133,7 @@ if __name__ == "__main__":
     parser.add_argument("--no_chunking", help="don't use chunking for http requests. i.e. send one large one instead of multiple small requests. default is to use chunking as many server have maximum sizes they handle", action="store_true", default=False)
     parser.add_argument("--no_exfil", help="don't simulate the beacon exfiltrating data (similar to c2, but with significantly larger outflow). default is to simulate data exfiltration", action="store_true", default=False)
     parser.add_argument("--no_noise", help="don't make semi-random, semi-realistic non-beaconing requests in the background to add noise (as user activity would). default is to make background noise", action="store_true", default=False)
+    parser.add_argument("--non_sticky_sessions", help="if using round robin, whether rotate after each request even during interactive c2 sessions and socks traffic. default is to be sticky, i.e. stick with the same host during sessions", action="store_true", default=False)
     parser.add_argument("--protocol", help="network protocol to use for beaconing communication. default is http", type=str, choices=['HTTP', 'HTTPS', 'HTTPSxSOCKS', 'SOCKS', 'WEBSOCKET'], default='HTTP')  # TODO choices=['DNS', 'TCP', 'UDP', '...']
     parser.add_argument("--reduce_interval_after_c2", help="reduce the polling interval after an active session, simulating how higher stealth could be achieved while the operator works on obtained data", action="store_true", default=False)
     parser.add_argument("--response_size", help="if log_only is set, set the http response size range to use. this is to mimic different malleable profile configurations (e.g. a profile which returns a legitimate-looking web page vs. one that returns the bare minimum)", type=str, choices=['NORMAL', 'LARGE', 'RANDOM'], default='NORMAL')

@@ -64,6 +64,7 @@ class Beacon():
         self.fake_timestamp: datetime   = datetime.now(timezone.utc) if self.args.start_time == 0 else datetime.fromtimestamp(self.args.start_time) # format is strftime('%m/%d/%Y %H:%M:%S.%.3f %p')
         self.destination_index: int     = 0
         self.proxy_uri: str             = f'{path_prefix}?__proxy'
+        self.round_robin_tracker: int   = 1
         self.reduction_count: int       = 0
         self.reduction_time:  int       = 0
 
@@ -182,6 +183,35 @@ class Beacon():
         resolve a destination 
         """
         return random.randint(-200, 400)
+
+
+    def round_robin(self):
+        """
+        depending on the round robin configuration and the currently used host, jump to the next host in the c2 server list
+        """
+        if self.args.round_robin_logic == '1':
+            self.next_destination()
+        elif self.args.round_robin_logic == '5':
+            if self.round_robin_tracker == 5:
+                self.next_destination()
+                self.round_robin_tracker = 1
+        elif self.args.round_robin_logic == '10':
+            if self.round_robin_tracker == 10:
+                self.next_destination()
+                self.round_robin_tracker = 1
+        elif self.args.round_robin_logic == '50':
+            if self.round_robin_tracker == 50:
+                self.next_destination()
+                self.round_robin_tracker = 1
+        elif self.args.round_robin_logic == '100':
+            if self.round_robin_tracker == 100:
+                self.next_destination()
+                self.round_robin_tracker = 1
+        elif self.args.round_robin_logic == 'RANDOM':
+            if random.randint(1, 100) < 20:
+                self.next_destination()
+
+        self.round_robin_tracker += 1
 
 
     def sleep(self):

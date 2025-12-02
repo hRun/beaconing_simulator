@@ -5,23 +5,24 @@ a python script to simulate malware beaconing in a slightly more sophistocated w
 
 ## features
 
-- simulate the beacon halting for a period of time due to the compromised device being switched off / asleep / ...
-- simulate the beacon receiving a command from the c2 server: multiple larger responses and larger requests to immitate commands and execution results going back and forth for a few minutes. the beacon then slows down for a while assuming the operator works on the results
-- simulate the beacon exfiltrating data: a very large request followed by some silence
-- simulate usage of round robin in different modes
-- simulate parallel user activity as background noise
-- run the simulation in a "log only" mode, not making any actual network requests, but writing a log file which should look similar to what your proxy/etc. would produce
-- jitter, intervals and maximum number of requests obviously
 - support of multiple protocols and http methods (more tbd)
+- jitter, data jitter, intervals and maximum number of requests obviously, as well as some additional options inspired by sliver, mythic and cobalt strike
+- run the simulation in a "log only" mode, not making any actual network requests, but writing a log file which looks similar to what your proxy/etc. would produce
+- simulate background noise caused by legitimate user activity during beacons
+- simulate usage of round robin in different modes
+- simulate the operator starting an interactive session and the beacon receiving a command from the c2 server with various configuration options
+- simulate http beacons going into socks mode as if they act as (revrse) proxy with various configuration options
+- simulate the beacon exfiltrating data (chunked or not)
+- simulate the beacon halting for a period of time due to the compromised device being switched off / asleep / ...
 
 
 ## usage
 
 ```
 usage: beaconing_simulation.py [-h] [--absence ABSENCE] [--active_c2_ratio ACTIVE_C2_RATIO] [--cap_data_jitter CAP_DATA_JITTER] [--data_jitter DATA_JITTER] [--jitter JITTER] [--log_only]
-                               [--max_socks_sessions MAX_SOCKS_SESSIONS] [--no_c2] [--no_chunking] [--no_exfil] [--no_noise] [--protocol {HTTP,HTTPS,HTTPSxSOCKS,SOCKS,WEBSOCKET}] [--reduce_interval_after_c2]
-                               [--response_size {NORMAL,LARGE,RANDOM}] [--request_method {GET,POST,PUT,MIXED}] [--round_robin_logic {RANDOM,1,5,10,50,100}] [--start_time START_TIME] [--static_ip]
-                               [--static_source STATIC_SOURCE] [--static_user STATIC_USER] [--use_dynamic_urls]
+                               [--max_socks_sessions MAX_SOCKS_SESSIONS] [--no_c2] [--no_chunking] [--no_exfil] [--no_noise] [--non_sticky_sessions] [--protocol {HTTP,HTTPS,HTTPSxSOCKS,SOCKS,WEBSOCKET}]
+                               [--reduce_interval_after_c2] [--response_size {NORMAL,LARGE,RANDOM}] [--request_method {GET,POST,PUT,MIXED}] [--round_robin_logic {RANDOM,1,5,10,50,100}]
+                               [--start_time START_TIME] [--static_ip] [--static_source STATIC_SOURCE] [--static_user STATIC_USER] [--use_dynamic_urls]
                                destinations interval max_requests
 
 positional arguments:
@@ -47,6 +48,8 @@ options:
   --no_chunking         don't use chunking for http requests. i.e. send one large one instead of multiple small requests. default is to use chunking as many server have maximum sizes they handle
   --no_exfil            don't simulate the beacon exfiltrating data (similar to c2, but with significantly larger outflow). default is to simulate data exfiltration
   --no_noise            don't make semi-random, semi-realistic non-beaconing requests in the background to add noise (as user activity would). default is to make background noise
+  --non_sticky_sessions
+                        if using round robin, whether rotate after each request even during interactive c2 sessions and socks traffic. default is to be sticky, i.e. stick with the same host during sessions
   --protocol {HTTP,HTTPS,HTTPSxSOCKS,SOCKS,WEBSOCKET}
                         network protocol to use for beaconing communication. default is http
   --reduce_interval_after_c2

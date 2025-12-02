@@ -39,6 +39,11 @@ class HttpBeacon(Beacon):
             self.args.protocol      = 'HTTPS'
             self.message_logger.info(f'{session_amount} instances of sudden SOCKS traffic, up to {self.MAX_SOCKS_DURATION} minutes each, will be simulated. as if the device was used as reverse proxy by the c2 server to run code (e.g. enumeration). SOCKS sessions will run on these requests: {self.SOCKS_REQUESTS}.')
 
+        if self.args.non_sticky_sessions:
+            self.message_logger.info(f'interactive c2 sessions and socks traffic will be non-sticky (when round robin is configured, the host will rotate even during these session).')
+        else:
+            self.message_logger.info(f'interactive c2 sessions and socks traffic will be sticky (when round robin is configured, the same host will be used throughout the whole session).')
+
 
     def clean_up(self, **kwargs):
         pass  # no clean up required
@@ -103,6 +108,9 @@ class HttpBeacon(Beacon):
         else:
             self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.default_response_size + random.randint(600, 500000))  # receiving command (eventually including tooling)
         self.fake_timestamp += timedelta(milliseconds=random.randint(100, 400))
+        
+        if self.args.non_sticky_sessions:
+            self.round_robin()  # during non-sticky sessions always move to the next c2 server immediately
 
         # optional: send faster beacons for a while indicating to the operator that the command is running
         # for i in range(random.randint(10, 120)):  # 2-120 seconds command runtime with the defined fake sleep
@@ -118,6 +126,9 @@ class HttpBeacon(Beacon):
                 else:
                     self.write_log_event(self.command_uri, self.chunk_size, self.jitter_data(self.default_response_size))
                 self.fake_timestamp += timedelta(seconds=1)  # 1s/chunk
+                
+                if self.args.non_sticky_sessions:
+                    self.round_robin()  # during non-sticky sessions always move to the next c2 server immediately
         else:
             if self.args.request_method == 'MIXED':
                 self.write_log_event(self.command_uri, exfil_size, self.jitter_data(self.default_response_size), 'POST')
@@ -141,6 +152,9 @@ class HttpBeacon(Beacon):
             self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.default_response_size + random.randint(600, 500000))  # receiving exfil command (eventually including tooling)
         self.fake_timestamp += timedelta(milliseconds=random.randint(100, 400))
 
+        if self.args.non_sticky_sessions:
+            self.round_robin()  # during non-sticky sessions always move to the next c2 server immediately
+
         if self.chunk_size > 0 and exfil_size > self.chunk_size:
             for i in range(int(exfil_size/self.chunk_size)):
                 if self.args.request_method == 'GET':
@@ -150,6 +164,9 @@ class HttpBeacon(Beacon):
                 else:
                     self.write_log_event(self.exfil_uri, self.chunk_size, self.jitter_data(self.default_response_size))
                 self.fake_timestamp += timedelta(seconds=1)  # 1s/chunk
+                
+                if self.args.non_sticky_sessions:
+                    self.round_robin()  # during non-sticky sessions always move to the next c2 server immediately
         else:
             if self.args.request_method == 'MIXED':
                 self.write_log_event(self.exfil_uri, exfil_size, self.jitter_data(self.default_response_size), 'POST')
@@ -168,12 +185,15 @@ class HttpBeacon(Beacon):
 
         self.message_logger.info(f'simulated socks session will last for approximately {int(socks_session_duration/60)} minutes.')
 
-        # one normal checkin request which initializes the socks session (indicated by a lerger than normal response size)
+        # one normal checkin request which initializes the socks session (indicated by a larger than normal response size)
         if self.args.request_method == 'MIXED':
             self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.jitter_data(self.default_response_size)+random.randint(4000, 8000), 'GET')
         else:
             self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.jitter_data(self.default_response_size)+random.randint(4000, 8000))
         self.fake_timestamp += timedelta(milliseconds=random.randint(100, 400))  # seems like appropriate values. can be changed though
+
+        if self.args.non_sticky_sessions:
+            self.round_robin()  # during non-sticky sessions always move to the next c2 server immediately
 
         # run the socks session as long as rolled
         while socks_session_duration_tracker < socks_session_duration:
@@ -186,23 +206,37 @@ class HttpBeacon(Beacon):
                     self.write_log_event(self.beaconing_uri, self.jitter_data(self.default_request_size), self.jitter_data(self.default_response_size))
                 normal_checkin_tracker = 0  # reset
 
+                if self.args.non_sticky_sessions:
+                    self.round_robin()  # during non-sticky sessions always move to the next c2 server immediately
+
             # socks session traffic
             # traffic size during socks sessions seems to be somewhat static based on slightly simplified real-world observations (in case of cs) for both request and response
             if self.args.request_method == 'MIXED':
                 self.write_log_event(f'{self.proxy_uri}&__payload={''.join(random.choices(string.ascii_letters + string.digits, k=24))}', random.randint(1000, 8000)*random.uniform(0.95, 1.07), random.randint(1000, 8000)*random.uniform(0.95, 1.07), 'POST')
                 time_increase1       = random.randint(100, 200)
                 self.fake_timestamp += timedelta(milliseconds=time_increase1)
+                
+                if self.args.non_sticky_sessions:
+                    self.round_robin()  # during non-sticky sessions always move to the next c2 server immediately
+
                 self.write_log_event(self.proxy_uri, random.randint(1000, 8000)*random.uniform(0.95, 1.07), random.randint(1000, 8000)*random.uniform(0.95, 1.07), 'GET')
             else:
                 self.write_log_event(f'{self.proxy_uri}&__payload={''.join(random.choices(string.ascii_letters + string.digits, k=24))}', random.randint(1000, 8000)*random.uniform(0.95, 1.07), random.randint(1000, 8000)*random.uniform(0.95, 1.07))
                 time_increase1       = random.randint(100, 200)
                 self.fake_timestamp += timedelta(milliseconds=time_increase1)
+                
+                if self.args.non_sticky_sessions:
+                    self.round_robin()  # during non-sticky sessions always move to the next c2 server immediately
+
                 self.write_log_event(self.proxy_uri, random.randint(1000, 8000)*random.uniform(0.95, 1.07), random.randint(1000, 8000)*random.uniform(0.95, 1.07))
 
             time_increase2                  = random.randint(100, 200)  # seems like appropriate values (ms). can be changed though
             socks_session_duration_tracker += (time_increase1+time_increase2)/1000
             normal_checkin_tracker         += (time_increase1+time_increase2)/1000
             self.fake_timestamp            += timedelta(milliseconds=time_increase2)
+
+            if self.args.non_sticky_sessions:
+                self.round_robin()  # during non-sticky sessions always move to the next c2 server immediately
 
         self.fake_timestamp += timedelta(milliseconds=random.randint(100, 400))  # seems like appropriate values. can be changed though
 
