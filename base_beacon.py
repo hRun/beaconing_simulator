@@ -49,7 +49,7 @@ class Beacon():
         self.COMMAND_RATIO: float       = 0.0
         self.EXFIL_START: int           = 0
         self.HOSTNAME: str              = args.static_source if args.static_source not in [None, '', ' '] else socket.gethostname()
-        self.USER: str                  = args.static_user if args.static_user not in [None, '', ' '] else getlogin()  # TODO domain? upn?
+        self.USER: str                  = args.static_user if args.static_user not in [None, '', ' '] else f"{getlogin()}{random.randint(1, 10000000)}"  # TODO domain? upn?
         self.USER_ACTIVITY_IPS: dict    = {}
         self.USER_ACTIVITY_DOMAINS:list = ['amazon.com', 'cnn.com', 'github.com', 'google.com', 'instagram.com', 'justbean.co', 'office.com', 'reddit.com', 'reuters.com', 'theuselessweb.com', 'tiktok.com', 'x.com', 'youtube.com', '9gag.com']
         self.absent: bool               = False
